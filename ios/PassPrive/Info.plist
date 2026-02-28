@@ -22,6 +22,17 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.292641565230-b8dkp2337t2ree5os8cctaf1cjj6bv79</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -33,12 +44,19 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+		<key>NSPhotoLibraryUsageDescription</key>
+	<string>PassPrive needs photo library access so you can let users select and upload photos.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>PassPrive uses your location while using the app to provide location-based features.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PassPrive may use your location in the background when enabled for continuous location-based updates.</string>
+
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.292641565230-b8dkp2337t2ree5os8cctaf1cjj6bv79</string>
 	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
+	<string>Assets.xcassets</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>
