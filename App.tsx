@@ -44,11 +44,10 @@ import ReviewRestaurantBooking from './screens/ReviewRestaurantBooking';
 import Geolocation, { GeoPosition } from 'react-native-geolocation-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { GOOGLE_MAPS_API_KEY } from '@env';
 
 import { LightThemeColors, DarkThemeColors } from './theme/theme';
 import { AuthProvider } from './context/AuthContext';
-
-const GOOGLE_KEY = 'AIzaSyCcO1v8IBFD3vLnDLBh7SR_hCkP7qD9isI';
 
 // ---------------------------------------------------------------------
 // CONTEXTS
@@ -405,10 +404,18 @@ export default function App() {
           const { latitude, longitude } = pos.coords;
 
           try {
+            if (!GOOGLE_MAPS_API_KEY) {
+              setLocationText(saved || 'Location unavailable');
+              return;
+            }
+
             const res = await axios.get(
               'https://maps.googleapis.com/maps/api/geocode/json',
               {
-                params: { latlng: `${latitude},${longitude}`, key: GOOGLE_KEY },
+                params: {
+                  latlng: `${latitude},${longitude}`,
+                  key: GOOGLE_MAPS_API_KEY,
+                },
               },
             );
 

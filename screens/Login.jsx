@@ -16,6 +16,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import supabase from '../supabase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '@env';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -34,10 +35,8 @@ export default function Login() {
   // ---------------------------
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId:
-        '292641565230-p3jb8hd592mepn83td74ip7fvf6jtm0s.apps.googleusercontent.com',
-      iosClientId:
-        '292641565230-b8dkp2337t2ree5os8cctaf1cjj6bv79.apps.googleusercontent.com',
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      iosClientId: GOOGLE_IOS_CLIENT_ID,
     });
   }, []);
 
@@ -76,6 +75,12 @@ export default function Login() {
   // ----------------------------------------------------------
   const handleGoogleSignIn = async () => {
     try {
+      if (!GOOGLE_WEB_CLIENT_ID) {
+        throw new Error(
+          'Missing GOOGLE_WEB_CLIENT_ID. Please set it in your .env file.',
+        );
+      }
+
       setSocialLoading(true);
 
       await GoogleSignin.hasPlayServices();
