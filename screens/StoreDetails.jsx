@@ -45,7 +45,12 @@ const { height, width } = Dimensions.get('window');
 export default function StoreDetails() {
   const route = useRoute();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
+  let insets = {};
+  try {
+    insets = useSafeAreaInsets() || { top: 0, bottom: 0 };
+  } catch (e) {
+    insets = { top: 0, bottom: 0 };
+  }
   const { colors, mode } = useContext(ThemeContext);
 
   const { store, stores = [] } = route.params || {};

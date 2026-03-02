@@ -26,6 +26,10 @@ import Home from './screens/Home';
 import Profile from './screens/Profile';
 import SavedLocations from './screens/SavedLocations';
 import Login from './screens/Login';
+import Onboarding from './screens/Onboarding';
+import Signup from './screens/Signup';
+import ForgotPassword from './screens/ForgotPassword';
+import ResetPassword from './screens/ResetPassword';
 import Details from './screens/Details';
 import Splash from './screens/Splash';
 import Membership from './screens/Membership';
@@ -80,8 +84,12 @@ export type RootStackParamList = {
   DetailedReview: undefined;
   BookTableScreen: undefined;
   Paybill: undefined;
-  StoreDetails:undefined;
-  ReviewRestaurantBooking:undefined;
+  StoreDetails: undefined;
+  ReviewRestaurantBooking: undefined;
+  Onboarding: undefined;
+  Signup: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -96,7 +104,15 @@ function ScreenWrapper({
   children: ReactNode;
   safeColor?: string;
 }) {
-  const insets = useSafeAreaInsets();
+  let insets = { top: 0, bottom: 0 };
+  try {
+    const safeInsets = useSafeAreaInsets();
+    if (safeInsets && typeof safeInsets.top === 'number' && typeof safeInsets.bottom === 'number') {
+      insets = safeInsets;
+    }
+  } catch (e) {
+    // fallback already set
+  }
   const theme = React.useContext(ThemeContext);
 
   const finalSafeColor = safeColor || theme.colors.background;
@@ -104,7 +120,7 @@ function ScreenWrapper({
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       {/* STATUS BAR */}
-      <View style={{ height: insets.top, backgroundColor: finalSafeColor }}>
+      <View style={{ height: insets.top || 0, backgroundColor: finalSafeColor }}>
         <StatusBar
           translucent={false}
           backgroundColor={finalSafeColor}
@@ -120,7 +136,7 @@ function ScreenWrapper({
       {/* BOTTOM SAFE AREA */}
       <View
         style={{
-          height: insets.bottom,
+          height: insets.bottom || 0,
           backgroundColor: theme.colors.background,
         }}
       />
@@ -159,6 +175,38 @@ function AppNavigator() {
         {() => (
           <ScreenWrapper>
             <Login />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Onboarding" options={{ animation: 'slide_from_bottom' }}>
+        {() => (
+          <ScreenWrapper>
+            <Onboarding />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Signup" options={{ animation: 'slide_from_bottom' }}>
+        {() => (
+          <ScreenWrapper>
+            <Signup />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="ForgotPassword" options={{ animation: 'slide_from_bottom' }}>
+        {() => (
+          <ScreenWrapper>
+            <ForgotPassword />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="ResetPassword" options={{ animation: 'slide_from_bottom' }}>
+        {() => (
+          <ScreenWrapper>
+            <ResetPassword />
           </ScreenWrapper>
         )}
       </Stack.Screen>

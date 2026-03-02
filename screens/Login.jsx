@@ -5,28 +5,29 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import supabase from '../supabase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '@env';
+import LinearGradient from 'react-native-linear-gradient';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Login() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
-  const [pass, setPass] = useState('');
-  const [secure, setSecure] = useState(true);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
 
@@ -115,115 +116,154 @@ export default function Login() {
   // EMAIL LOGIN
   // ----------------------------------------------------------
   const handleLogin = async () => {
-    if (!email || !pass) return;
-    setLoading(true);
-
-    let result = await supabase.auth.signInWithPassword({
-      email,
-      password: pass,
-    });
-
-    if (result.error) {
-      result = await supabase.auth.signUp({
-        email,
-        password: pass,
-      });
-
-      if (result.error) {
-        alert(result.error.message);
-        setLoading(false);
-        return;
-      }
+    if (!email || !password) {
+      alert('Please fill in all fields');
+      return;
     }
 
-    await checkUserInTable(result.data.user);
+    setLoading(true);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    await AsyncStorage.setItem('isLoggedIn', 'true');
+    await checkUserInTable(data.user);
     setLoading(false);
   };
 
   return (
     <KeyboardAwareScrollView
-      contentContainerStyle={{ flex: 1, backgroundColor: '#0D0D0D' }}
-      enableOnAndroid={true}
-      extraScrollHeight={20}
+      style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
     >
-      <View style={styles.bg}>
-        <TouchableOpacity
-          style={[styles.skipButton, { top: insets.top + 12 }]}
+      {/* Purple gradient brand section */}
+      <LinearGradient
+        colors={['#8F3AFF', '#8F3AFF', '#5800AB']}
+        style={[styles.brandSection, { paddingTop: insets.top + SCREEN_HEIGHT * 0.05 }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        {/* Skip Button */}
+        <TouchableOpacity 
+          style={[styles.skipButton, { top: (insets?.top || 0) + 8 }]}
           onPress={() => navigation.navigate('Home')}
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
+        
+        <Image
+          source={require('../assets/passprrive.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+    
+      </LinearGradient>
 
-        <View style={styles.mainContainer}>
-          <View style={styles.hero}>
-            <Image
-              source={require('../assets/Login.jpg')}
-              style={styles.heroImage}
-            />
-            <View style={styles.heroOverlay} />
-            <Text style={styles.brand}>PassPrivé</Text>
-            <Text style={styles.tagline}>Luxury • Comfort • Dining</Text>
-          </View>
+      {/* Form section */}
+      <View style={styles.formSection}>
+        <Text style={styles.title}>Account Login</Text>
+        <Text style={styles.subtitle}>
+          Welcome Back! Please login to your account
+        </Text>
 
-          <View style={styles.card}>
-            <Text style={styles.title}>Log in or sign up</Text>
+        {/* Email Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Email"
+            placeholderTextColor="#999999"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
 
-            <View style={styles.inputBox}>
-              <Mail size={20} color="#B3B3B3" />
-              <TextInput
-                placeholder="Email address"
-                placeholderTextColor="#777"
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
+        {/* Password Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, { paddingRight: 50 }]}
+            placeholder="Password"
+            placeholderTextColor="#999999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? (
+              <Eye size={20} color="#999999" />
+            ) : (
+              <EyeOff size={20} color="#999999" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Forgot Password Link */}
+        <TouchableOpacity
+          style={styles.forgotPasswordContainer}
+          onPress={() => navigation.navigate('ForgotPassword')}
+        >
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        {/* Login Button */}
+        <TouchableOpacity
+          style={styles.loginBtn}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.loginText}>Log In</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.line} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.line} />
+        </View>
+
+        {/* Google Login Button */}
+        <TouchableOpacity
+          style={styles.googleBtn}
+          onPress={handleGoogleSignIn}
+          disabled={socialLoading}
+        >
+          {socialLoading ? (
+            <ActivityIndicator color="#666666" />
+          ) : (
+            <>
+              <Image
+                source={require('../assets/google.png')}
+                style={styles.googleIcon}
+                resizeMode="contain"
               />
-            </View>
+              <Text style={styles.googleText}>Log In with Google</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
-            <View style={styles.inputBox}>
-              <Lock size={20} color="#B3B3B3" />
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor="#777"
-                secureTextEntry={secure}
-                style={styles.input}
-                value={pass}
-                onChangeText={setPass}
-              />
-              <TouchableOpacity onPress={() => setSecure(!secure)}>
-                {secure ? (
-                  <EyeOff size={20} color="#777" />
-                ) : (
-                  <Eye size={20} color="#777" />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginText}>Continue</Text>}
-            </TouchableOpacity>
-
-            <View style={styles.dividerRow}>
-              <View style={styles.line} />
-              <Text style={styles.or}>or continue with</Text>
-              <View style={styles.line} />
-            </View>
-
-            <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.iconBtn} onPress={handleGoogleSignIn}>
-                {socialLoading ? (
-                  <ActivityIndicator color="#000" size="small" />
-                ) : (
-                  <Image source={require('../assets/google.png')} style={styles.socialIcon} />
-                )}
-                <Text style={styles.google}>Login or Signup With Google</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.agree}>
-              By continuing, you agree to our <Text style={styles.link}>Terms</Text> &{' '}
-              <Text style={styles.link}>Privacy Policy</Text>
-            </Text>
-          </View>
+        {/* Signup Link */}
+        <View style={styles.signupRow}>
+          <Text style={styles.signupPrompt}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+            <Text style={styles.signupLink}>Sign up</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAwareScrollView>
@@ -231,73 +271,155 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#0D0D0D' },
-  mainContainer: { flex: 1, justifyContent: 'flex-end' },
+  container: {
+    flex: 1,
+    backgroundColor: '#8F3AFF',
+  },
+  brandSection: {
+    paddingVertical: SCREEN_HEIGHT * 0.04,
+    paddingBottom: SCREEN_HEIGHT * 0.05,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   skipButton: {
     position: 'absolute',
-    right: 20,
-    zIndex: 50,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 18,
+    right: SCREEN_WIDTH * 0.04,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: SCREEN_WIDTH * 0.038,
+    paddingVertical: SCREEN_HEIGHT * 0.008,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
   },
-  skipText: { color: '#fff', fontSize: 13 },
-  hero: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', overflow: 'hidden', zIndex: 2 },
-  heroImage: {
+  skipText: {
+    color: '#FFFFFF',
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '600',
+  },
+  logo: {
+    width: SCREEN_WIDTH * 0.55,
+    height: SCREEN_HEIGHT * 0.08,
+    marginBottom: SCREEN_HEIGHT * 0.008,
+  },
+  tagline: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#FFFFFF',
+    fontWeight: '400',
+  },
+  formSection: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: SCREEN_WIDTH * 0.07,
+    paddingTop: SCREEN_HEIGHT * 0.036,
+  },
+  title: {
+    fontSize: SCREEN_WIDTH * 0.08,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    textAlign: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.015,
+  },
+  subtitle: {
+    fontSize: SCREEN_WIDTH * 0.037,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: SCREEN_WIDTH * 0.054,
+    marginBottom: SCREEN_HEIGHT * 0.04,
+  },
+  inputContainer: {
+    position: 'relative',
+    marginBottom: SCREEN_HEIGHT * 0.013,
+  },
+  input: {
+    backgroundColor: '#EDEDED',
+    borderRadius: 8,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingVertical: SCREEN_HEIGHT * 0.018,
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#2D2D2D',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+  },
+  eyeIcon: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    right: SCREEN_WIDTH * 0.04,
+    top: SCREEN_HEIGHT * 0.018,
+    padding: 4,
   },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
-  brand: { color: '#fff', fontSize: 32, fontWeight: '700' },
-  tagline: { color: '#B3B3B3', marginTop: 4, fontSize: 14, marginBottom: 24 },
-  card: {
-    flex: 0,
-    height: SCREEN_HEIGHT * 0.6,
-    backgroundColor: '#0D0D0D',
-    padding: 22,
-    marginTop: -60,
-    paddingTop: 40,
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginTop: SCREEN_HEIGHT * 0.008,
+    marginBottom: SCREEN_HEIGHT * 0.025,
   },
-  title: { fontSize: 20, fontWeight: '600', color: '#fff', marginBottom: 10, marginTop: 40 },
-  inputBox: {
-    flexDirection: 'row',
-    backgroundColor: '#2A2A2A',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 10,
+  forgotPasswordText: {
+    fontSize: SCREEN_WIDTH * 0.036,
+    color: '#999999',
   },
-  input: { flex: 1, marginLeft: 10, color: '#fff' },
   loginBtn: {
-    backgroundColor: '#C59D5F',
-    paddingVertical: 13,
-    borderRadius: 14,
+    backgroundColor: '#2D2D2D',
+    borderRadius: 35,
+    paddingVertical: SCREEN_HEIGHT * 0.02,
     alignItems: 'center',
-    marginTop: 20,
+    marginBottom: SCREEN_HEIGHT * 0.028,
   },
-  loginText: { color: '#fff', fontSize: 17, fontWeight: '600' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 10 },
-  line: { flex: 1, height: 1, backgroundColor: '#2A2A2A' },
-  or: { color: '#777', marginHorizontal: 12 },
-  socialRow: { flexDirection: 'row', justifyContent: 'center', gap: 25 },
-  iconBtn: {
-    backgroundColor: 'white',
-    padding: 13,
-    width: '98%',
-    borderRadius: 16,
+  loginText: {
+    color: '#FFFFFF',
+    fontSize: SCREEN_WIDTH * 0.042,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.023,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#CCCCCC',
+  },
+  orText: {
+    marginHorizontal: SCREEN_WIDTH * 0.04,
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  googleBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 35,
+    paddingVertical: SCREEN_HEIGHT * 0.018,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+    marginBottom: SCREEN_HEIGHT * 0.025,
+  },
+  googleIcon: {
+    width: SCREEN_WIDTH * 0.065,
+    height: SCREEN_WIDTH * 0.065,
+    marginRight: SCREEN_WIDTH * 0.025,
+  },
+  googleText: {
+    color: '#444444',
+    fontSize: SCREEN_WIDTH * 0.04,
+    fontWeight: '500',
+  },
+  signupRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 15,
+    paddingBottom: SCREEN_HEIGHT * 0.04,
   },
-  socialIcon: { width: 26, height: 26 },
-  agree: { color: '#777', textAlign: 'center', marginTop: 10, lineHeight: 20, fontSize: 12 },
-  link: { color: '#DA3224', textDecorationLine: 'underline' },
-  google: { fontWeight: '600' },
+  signupPrompt: {
+    fontSize: SCREEN_WIDTH * 0.037,
+    color: '#666666',
+  },
+  signupLink: {
+    fontSize: SCREEN_WIDTH * 0.037,
+    color: '#000000',
+    fontWeight: '700',
+  },
 });

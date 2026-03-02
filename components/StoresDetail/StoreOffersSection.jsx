@@ -16,7 +16,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 export default function StoreOffersSection({ store, ui, onPressPayBill }) {
-  const insets = useSafeAreaInsets();
+  let insets = {};
+  try {
+    insets = useSafeAreaInsets() || { top: 0, bottom: 0 };
+  } catch (e) {
+    insets = { top: 0, bottom: 0 };
+  }
 
   const accent = ui?.active || "#4B23FF";
   const cardBg = ui?.card || "#FFFFFF";
