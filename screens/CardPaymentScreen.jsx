@@ -8,11 +8,14 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { ChevronLeft, CreditCard } from 'lucide-react-native';
 import { ThemeContext } from '../App';
+import LinearGradient from 'react-native-linear-gradient';
 
-const PURPLE = '#4B23FF';
+const PURPLE = '#8F3AFF';
+const DARK_PURPLE = '#5800AB';
 
 export default function CardPaymentScreen({ route, navigation }) {
   const { amount, discount, originalAmount, restaurant } = route.params || {};
@@ -89,28 +92,46 @@ export default function CardPaymentScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: BG, borderBottomColor: BORDER }]}>
-        <Pressable
-          style={[styles.backBtn, { backgroundColor: CARD }]}
-          onPress={() => navigation.goBack()}
-        >
-          <ChevronLeft size={20} color={BLACK} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: BLACK }]}>Card Payment</Text>
-        <View style={{ width: 36 }} />
-      </View>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={[DARK_PURPLE, PURPLE, PURPLE]}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        <SafeAreaView>
+          <View style={styles.header}>
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <ChevronLeft size={22} color="#fff" />
+            </Pressable>
+            <Text style={styles.headerTitle}>Card Payment</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView style={{ backgroundColor: '#F5F5F7' }} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Amount Display */}
-        <View style={[styles.amountBanner, { backgroundColor: PURPLE }]}>
+        <LinearGradient
+          colors={[DARK_PURPLE, PURPLE]}
+          style={styles.amountBanner}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <Text style={styles.amountLabel}>Amount to Pay</Text>
           <Text style={styles.amountValue}>₹{amount?.toFixed(2) || '0.00'}</Text>
-        </View>
+        </LinearGradient>
 
         {/* Card Preview */}
-        <View style={[styles.cardPreview, { backgroundColor: BLACK }]}>
+        <LinearGradient
+          colors={['#2C2C2C', '#1A1A1A']}
+          style={styles.cardPreview}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <View style={styles.cardChip} />
           <Text style={styles.cardNumberPreview}>
             {cardNumber || '•••• •••• •••• ••••'}
@@ -128,166 +149,177 @@ export default function CardPaymentScreen({ route, navigation }) {
             </View>
           </View>
           <CreditCard size={32} color="rgba(255,255,255,0.2)" style={styles.cardIcon} />
-        </View>
+        </LinearGradient>
 
         {/* Card Details Form */}
-        <Text style={[styles.sectionTitle, { color: BLACK }]}>Enter Card Details</Text>
+        <Text style={styles.sectionTitle}>Enter Card Details</Text>
 
         {/* Card Number */}
-        <View style={[styles.inputGroup, { borderColor: BORDER, backgroundColor: BG }]}>
-          <Text style={[styles.inputLabel, { color: MUTED }]}>Card Number</Text>
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Card Number</Text>
           <TextInput
             value={cardNumber}
             onChangeText={handleCardNumberChange}
             placeholder="1234 5678 9012 3456"
-            placeholderTextColor={MUTED}
+            placeholderTextColor="#999"
             keyboardType="number-pad"
-            style={[styles.input, { color: BLACK }]}
+            style={styles.input}
             maxLength={19}
           />
         </View>
 
         {/* Card Holder Name */}
-        <View style={[styles.inputGroup, { borderColor: BORDER, backgroundColor: BG }]}>
-          <Text style={[styles.inputLabel, { color: MUTED }]}>Cardholder Name</Text>
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Cardholder Name</Text>
           <TextInput
             value={cardName}
             onChangeText={setCardName}
             placeholder="John Doe"
-            placeholderTextColor={MUTED}
+            placeholderTextColor="#999"
             autoCapitalize="words"
-            style={[styles.input, { color: BLACK }]}
+            style={styles.input}
           />
         </View>
 
         {/* Expiry & CVV Row */}
         <View style={styles.row}>
-          <View style={[styles.inputGroup, styles.halfInput, { borderColor: BORDER, backgroundColor: BG }]}>
-            <Text style={[styles.inputLabel, { color: MUTED }]}>Expiry Date</Text>
+          <View style={[styles.inputGroup, styles.halfInput]}>
+            <Text style={styles.inputLabel}>Expiry Date</Text>
             <TextInput
               value={expiryDate}
               onChangeText={handleExpiryChange}
               placeholder="MM/YY"
-              placeholderTextColor={MUTED}
+              placeholderTextColor="#999"
               keyboardType="number-pad"
-              style={[styles.input, { color: BLACK }]}
+              style={styles.input}
               maxLength={5}
             />
           </View>
 
-          <View style={[styles.inputGroup, styles.halfInput, { borderColor: BORDER, backgroundColor: BG }]}>
-            <Text style={[styles.inputLabel, { color: MUTED }]}>CVV</Text>
+          <View style={[styles.inputGroup, styles.halfInput]}>
+            <Text style={styles.inputLabel}>CVV</Text>
             <TextInput
               value={cvv}
               onChangeText={handleCvvChange}
               placeholder="123"
-              placeholderTextColor={MUTED}
+              placeholderTextColor="#999"
               keyboardType="number-pad"
               secureTextEntry
-              style={[styles.input, { color: BLACK }]}
+              style={styles.input}
               maxLength={3}
             />
           </View>
         </View>
 
         {/* Security Note */}
-        <View style={[styles.securityNote, { backgroundColor: CARD }]}>
-          <Text style={[styles.securityText, { color: MUTED }]}>
+        <View style={styles.securityNote}>
+          <Text style={styles.securityText}>
             🔒 Your card details are secure and encrypted. We don't store your CVV.
           </Text>
         </View>
       </ScrollView>
 
       {/* Pay Button */}
-      <View style={[styles.ctaBar, { backgroundColor: BG, borderTopColor: BORDER }]}>
+      <View style={styles.ctaBar}>
         <Pressable
           disabled={!isFormValid() || processing}
-          style={[
-            styles.payBtn,
-            {
-              backgroundColor: isFormValid() && !processing ? PURPLE : CARD,
-            },
-          ]}
           onPress={handlePayment}
         >
-          {processing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text
-              style={[
-                styles.payBtnText,
-                { color: isFormValid() ? '#fff' : MUTED },
-              ]}
-            >
-              Pay ₹{amount?.toFixed(2) || '0.00'}
-            </Text>
-          )}
+          <LinearGradient
+            colors={isFormValid() && !processing ? [DARK_PURPLE, PURPLE] : ['#E0E0E0', '#BDBDBD']}
+            style={styles.payBtn}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            {processing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.payBtnText}>
+                Pay ₹{amount?.toFixed(2) || '0.00'}
+              </Text>
+            )}
+          </LinearGradient>
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerGradient: {
+    paddingBottom: 16,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
+    color: '#fff',
   },
   amountBanner: {
     marginHorizontal: 16,
     marginTop: 20,
-    padding: 20,
-    borderRadius: 16,
+    padding: 24,
+    borderRadius: 24,
     alignItems: 'center',
+    shadowColor: PURPLE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   amountLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   amountValue: {
-    fontSize: 36,
+    fontSize: 44,
     fontWeight: '900',
     color: '#fff',
   },
   cardPreview: {
     marginHorizontal: 16,
     marginTop: 24,
-    padding: 24,
-    borderRadius: 20,
-    minHeight: 200,
+    padding: 26,
+    borderRadius: 24,
+    minHeight: 210,
     position: 'relative',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
   },
   cardChip: {
-    width: 50,
-    height: 40,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    width: 52,
+    height: 42,
+    backgroundColor: 'rgba(255,255,255,0.25)',
     borderRadius: 8,
-    marginBottom: 30,
+    marginBottom: 32,
   },
   cardNumberPreview: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: 2,
-    marginBottom: 24,
+    letterSpacing: 3,
+    marginBottom: 28,
   },
   cardBottom: {
     flexDirection: 'row',
@@ -295,19 +327,20 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: 'rgba(255,255,255,0.6)',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 1,
   },
   cardInfo: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#fff',
   },
   cardIcon: {
     position: 'absolute',
-    right: 20,
-    top: 20,
+    right: 24,
+    top: 24,
   },
   sectionTitle: {
     marginTop: 32,
@@ -315,24 +348,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
+    color: '#1A1A1A',
   },
   inputGroup: {
     marginHorizontal: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontWeight: '800',
+    marginBottom: 10,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    color: '#666',
   },
   input: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
+    color: '#1A1A1A',
   },
   row: {
     flexDirection: 'row',
@@ -345,15 +386,17 @@ const styles = StyleSheet.create({
   },
   securityNote: {
     marginHorizontal: 16,
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 12,
+    marginTop: 28,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#E8F5E9',
   },
   securityText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
     lineHeight: 20,
+    color: '#2E7D32',
   },
   ctaBar: {
     position: 'absolute',
@@ -361,17 +404,23 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderTopWidth: 1,
+    paddingVertical: 16,
+    backgroundColor: '#F5F5F7',
   },
   payBtn: {
-    height: 56,
-    borderRadius: 28,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: PURPLE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   payBtnText: {
     fontSize: 18,
     fontWeight: '800',
+    color: '#fff',
   },
 });

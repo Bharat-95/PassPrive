@@ -6,17 +6,22 @@ import {
   SafeAreaView,
   Pressable,
   ScrollView,
-  Image,
+  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { ChevronLeft, CreditCard, Smartphone, Building2, Wallet } from 'lucide-react-native';
+import { ChevronLeft, CreditCard, Smartphone, Building2, Wallet, CheckCircle2 } from 'lucide-react-native';
 import { ThemeContext } from '../App';
+import LinearGradient from 'react-native-linear-gradient';
 
-const PURPLE = '#4B23FF';
+const PURPLE = '#8F3AFF';
+const DARK_PURPLE = '#5800AB';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function PaymentMethodScreen({ route, navigation }) {
   const { amount, discount, originalAmount, restaurant } = route.params || {};
   const { colors } = useContext(ThemeContext);
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [processing, setProcessing] = useState(false);
 
   const BG = colors.background;
   const BLACK = colors.text;
@@ -53,71 +58,72 @@ export default function PaymentMethodScreen({ route, navigation }) {
 
   function handlePaymentMethod(methodId) {
     setSelectedMethod(methodId);
+    setProcessing(true);
+    
     if (methodId === 'card') {
+      setProcessing(false);
       navigation.navigate('CardPayment', {
         amount,
         discount,
         originalAmount,
         restaurant,
       });
-    } else if (methodId === 'upi') {
-      // Simulate UPI payment success
+    } else {
+      // Simulate other payment methods
       setTimeout(() => {
+        setProcessing(false);
         navigation.navigate('PaymentSuccess', {
           amount,
-          method: 'UPI',
+          method: methodId === 'upi' ? 'UPI' : methodId === 'netbanking' ? 'Net Banking' : 'Wallet',
           restaurant,
         });
-      }, 1500);
-    } else if (methodId === 'netbanking') {
-      // Simulate Netbanking payment success
-      setTimeout(() => {
-        navigation.navigate('PaymentSuccess', {
-          amount,
-          method: 'Net Banking',
-          restaurant,
-        });
-      }, 1500);
-    } else if (methodId === 'wallet') {
-      // Simulate Wallet payment success
-      setTimeout(() => {
-        navigation.navigate('PaymentSuccess', {
-          amount,
-          method: 'Wallet',
-          restaurant,
-        });
-      }, 1500);
+      }, 2000);
     }
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: BG, borderBottomColor: BORDER }]}>
-        <Pressable
-          style={[styles.backBtn, { backgroundColor: CARD }]}
-          onPress={() => navigation.goBack()}
-        >
-          <ChevronLeft size={20} color={BLACK} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: BLACK }]}>Select Payment Method</Text>
-        <View style={{ width: 36 }} />
-      </View>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={[DARK_PURPLE, PURPLE, PURPLE]}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        <SafeAreaView>
+          <View style={styles.header}>
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <ChevronLeft size={22} color="#fff" />
+            </Pressable>
+            <Text style={styles.headerTitle}>Select Payment</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={{ backgroundColor: '#F5F5F7' }} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Amount Summary */}
-        <View style={[styles.amountCard, { backgroundColor: CARD, borderColor: BORDER }]}>
-          <Text style={[styles.amountLabel, { color: MUTED }]}>Total Amount to Pay</Text>
-          <Text style={[styles.amountValue, { color: BLACK }]}>₹{amount?.toFixed(2) || '0.00'}</Text>
+        <LinearGradient
+          colors={[DARK_PURPLE, PURPLE]}
+          style={styles.amountCard}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={styles.amountLabel}>Total Amount to Pay</Text>
+          <Text style={styles.amountValue}>₹{amount?.toFixed(2) || '0.00'}</Text>
           {discount > 0 && (
-            <Text style={[styles.savingsText, { color: '#4CAF50' }]}>
-              You saved ₹{discount.toFixed(2)}!
-            </Text>
+            <View style={styles.savingsBadge}>
+              <Text style={styles.savingsText}>
+                🎉 You saved ₹{discount.toFixed(2)}!
+              </Text>
+            </View>
           )}
-        </View>
+        </LinearGradient>
 
         {/* Payment Methods */}
-        <Text style={[styles.sectionTitle, { color: BLACK }]}>Choose Payment Method</Text>
+        <Text style={styles.sectionTitle}>Choose Payment Method</Text>
 
         <View style={styles.methodsContainer}>
           {paymentMethods.map((method) => {
@@ -129,93 +135,119 @@ export default function PaymentMethodScreen({ route, navigation }) {
                 key={method.id}
                 style={[
                   styles.methodCard,
-                  {
-                    backgroundColor: BG,
-                    borderColor: isSelected ? PURPLE : BORDER,
-                    borderWidth: isSelected ? 2 : 1,
-                  },
+                  isSelected && styles.methodCardSelected,
                 ]}
-                onPress={() => handlePaymentMethod(method.id)}
+                onPress={() => !processing && handlePaymentMethod(method.id)}
+                disabled={processing}
               >
-                <View style={[styles.iconCircle, { backgroundColor: CARD }]}>
-                  <Icon size={24} color={PURPLE} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.methodName, { color: BLACK }]}>{method.name}</Text>
-                  <Text style={[styles.methodDesc, { color: MUTED }]}>{method.description}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.radioOuter,
-                    { borderColor: isSelected ? PURPLE : BORDER },
-                  ]}
+                <LinearGradient
+                  colors={isSelected ? [PURPLE, DARK_PURPLE] : ['#F0F0F0', '#E0E0E0']}
+                  style={styles.iconCircle}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
-                  {isSelected && <View style={[styles.radioInner, { backgroundColor: PURPLE }]} />}
+                  <Icon size={24} color={isSelected ? '#fff' : '#666'} />
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.methodName, isSelected && { color: PURPLE }]}>
+                    {method.name}
+                  </Text>
+                  <Text style={styles.methodDesc}>{method.description}</Text>
                 </View>
+                {isSelected ? (
+                  processing ? (
+                    <ActivityIndicator color={PURPLE} />
+                  ) : (
+                    <CheckCircle2 size={24} color={PURPLE} fill={PURPLE} />
+                  )
+                ) : (
+                  <View style={styles.radioOuter}>
+                    <View style={styles.radioInner} />
+                  </View>
+                )}
               </Pressable>
             );
           })}
         </View>
 
         {/* Security Note */}
-        <View style={[styles.securityNote, { backgroundColor: CARD }]}>
-          <Text style={[styles.securityText, { color: MUTED }]}>
+        <View style={styles.securityNote}>
+          <Text style={styles.securityText}>
             🔒 All transactions are secure and encrypted
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerGradient: {
+    paddingBottom: 16,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
+    color: '#fff',
   },
   amountCard: {
     marginHorizontal: 16,
     marginTop: 20,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
+    padding: 24,
+    borderRadius: 24,
     alignItems: 'center',
+    shadowColor: PURPLE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   amountLabel: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 10,
   },
   amountValue: {
-    fontSize: 36,
+    fontSize: 44,
     fontWeight: '900',
+    color: '#fff',
+  },
+  savingsBadge: {
+    marginTop: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   savingsText: {
     fontSize: 14,
-    fontWeight: '700',
-    marginTop: 8,
+    fontWeight: '800',
+    color: '#fff',
   },
   sectionTitle: {
-    marginTop: 28,
+    marginTop: 32,
     marginHorizontal: 16,
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
+    color: '#1A1A1A',
   },
   methodsContainer: {
     paddingHorizontal: 16,
@@ -224,14 +256,27 @@ const styles = StyleSheet.create({
   methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 14,
-    gap: 14,
+    padding: 18,
+    borderRadius: 18,
+    gap: 16,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  methodCardSelected: {
+    backgroundColor: '#F5EDFF',
+    shadowColor: PURPLE,
+    shadowOpacity: 0.2,
+    borderWidth: 2,
+    borderColor: PURPLE,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -239,33 +284,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 4,
+    color: '#1A1A1A',
   },
   methodDesc: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#666',
   },
   radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
+    borderColor: '#D0D0D0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   securityNote: {
     marginHorizontal: 16,
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 12,
+    marginTop: 28,
+    padding: 18,
+    borderRadius: 16,
     alignItems: 'center',
+    backgroundColor: '#E8F5E9',
   },
   securityText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#2E7D32',
   },
 });
