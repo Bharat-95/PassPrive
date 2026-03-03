@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,20 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import LinearGradient from 'react-native-linear-gradient';
+import supabase from '../supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '@env';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Signup() {
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      iosClientId: GOOGLE_IOS_CLIENT_ID,
+    });
+  }, []);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -35,16 +45,84 @@ export default function Signup() {
     }
 
     setLoading(true);
-    // Add your signup logic here
-    console.log('Signup:', { fullName, email, password });
-    setLoading(false);
+    try {
+      // Sign up with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        alert(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // Insert user into users table
+      const user = data.user || (data.session && data.session.user);
+      if (user) {
+        await supabase.from('users').insert({
+          id: user.id,
+          email: user.email,
+          full_name: fullName,
+          created_at: new Date(),
+        });
+      }
+
+      alert('Signup successful! Please check your email for verification.');
+      navigation.replace('Login');
+    } catch (err) {
+      alert('Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignup = async () => {
-    setSocialLoading(true);
-    // Add your Google signup logic here
-    console.log('Google signup');
-    setSocialLoading(false);
+    try {
+      if (!GOOGLE_WEB_CLIENT_ID) {
+        throw new Error('Missing GOOGLE_WEB_CLIENT_ID. Please set it in your .env file.');
+      }
+      setSocialLoading(true);
+      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.signOut();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.idToken || (userInfo.data && userInfo.data.idToken);
+      if (!idToken) throw new Error('id_token missing');
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (error) {
+        alert(error.message);
+        setSocialLoading(false);
+        return;
+      }
+      await AsyncStorage.setItem('isLoggedIn', 'true');
+      // Insert user into users table if not exists
+      const user = data.user;
+      if (user) {
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        if (!existingUser) {
+          await supabase.from('users').insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || '',
+            created_at: new Date(),
+          });
+        }
+      }
+      alert('Google signup successful!');
+      navigation.replace('Home');
+    } catch (err) {
+      alert(err.message || 'Google signup failed.');
+    } finally {
+      setSocialLoading(false);
+    }
   };
 
   return (
