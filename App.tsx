@@ -43,6 +43,9 @@ import LeaveReview from './screens/LeaveReviewScreen';
 import DetailedReview from './screens/DetailedReviewScreen';
 import BookTableScreen from './screens/BookTableScreen';
 import Paybill from './screens/PayBillScreen';
+import PaymentMethodScreen from './screens/PaymentMethodScreen';
+import CardPaymentScreen from './screens/CardPaymentScreen';
+import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
 import StoreDetails from './screens/StoreDetails';
 import ReviewRestaurantBooking from './screens/ReviewRestaurantBooking';
 import Geolocation, { GeoPosition } from 'react-native-geolocation-service';
@@ -84,6 +87,9 @@ export type RootStackParamList = {
   DetailedReview: undefined;
   BookTableScreen: undefined;
   Paybill: undefined;
+  PaymentMethod: undefined;
+  CardPayment: undefined;
+  PaymentSuccess: undefined;
   StoreDetails: undefined;
   ReviewRestaurantBooking: undefined;
   Onboarding: undefined;
@@ -350,6 +356,27 @@ function AppNavigator() {
         {props => (
           <ScreenWrapper>
             <Paybill {...props} />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="PaymentMethod">
+        {props => (
+          <ScreenWrapper>
+            <PaymentMethodScreen {...props} />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="CardPayment">
+        {props => (
+          <ScreenWrapper>
+            <CardPaymentScreen {...props} />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="PaymentSuccess" options={{ headerShown: false, gestureEnabled: false }}>
+        {props => (
+          <ScreenWrapper>
+            <PaymentSuccessScreen {...props} />
           </ScreenWrapper>
         )}
       </Stack.Screen>

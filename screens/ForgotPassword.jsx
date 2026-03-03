@@ -59,7 +59,7 @@ export default function ForgotPassword() {
     >
       {/* Purple gradient brand section */}
       <LinearGradient
-        colors={['#8F3AFF', '#8F3AFF', '#5800AB']}
+        colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
         style={[styles.brandSection, { paddingTop: insets.top + SCREEN_HEIGHT * 0.05 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}

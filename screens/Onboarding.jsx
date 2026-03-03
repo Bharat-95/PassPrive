@@ -18,7 +18,12 @@ export default function Onboarding() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#5800AB', '#8F3AFF', '#9F3AFF']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
       {/* Main content */}
       <View style={styles.mainContent}>
         {/* Logo and tagline section */}
@@ -44,19 +49,22 @@ export default function Onboarding() {
               resizeMode="contain"
             />
           </View>
+          
+          {/* Purple gradient overlay on bottom */}
+          <LinearGradient
+            colors={['rgba(143, 58, 255, 0)', 'rgba(143, 58, 255, 0.7)', '#8F3AFF']}
+            style={styles.bottomGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          >
+            {/* Purple section text - positioned at bottom of image */}
+            <View style={styles.purpleSection}>
+              <Text style={styles.purpleText}>
+                Unlock exclusive deals, hidden gems, and the hottest attractions across Mauritius.
+              </Text>
+            </View>
+          </LinearGradient>
         </View>
-
-        {/* Purple gradient section */}
-        <LinearGradient
-          colors={['#9F3AFF', '#921EFF', '#5800AB']}
-          style={styles.purpleSection}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        >
-          <Text style={styles.purpleText}>
-            Unlock exclusive deals, hidden gems, and the hottest attractions across Mauritius.
-          </Text>
-        </LinearGradient>
 
         {/* Action buttons */}
         <View style={[styles.actionSection, { paddingBottom: (insets?.bottom || 0) + 32 }]}>
@@ -75,14 +83,13 @@ export default function Onboarding() {
           </View>
         </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   mainContent: {
     flex: 1,
@@ -90,7 +97,7 @@ const styles = StyleSheet.create({
   logoSection: {
     flex: 1,
     position: 'relative',
-    minHeight: SCREEN_HEIGHT * 0.6,
+    minHeight: SCREEN_HEIGHT * 0.65,
   },
   backgroundImage: {
     width: '100%',
@@ -100,6 +107,13 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: SCREEN_HEIGHT * 0.35,
   },
   skipButton: {
     position: 'absolute',
@@ -137,7 +151,9 @@ const styles = StyleSheet.create({
   },
   purpleSection: {
     paddingHorizontal: SCREEN_WIDTH * 0.06,
-    paddingVertical: SCREEN_HEIGHT * 0.025,
+    paddingVertical: SCREEN_HEIGHT * 0.03,
+    justifyContent: 'flex-end',
+    flex: 1,
   },
   purpleText: {
     fontSize: SCREEN_WIDTH * 0.045,
