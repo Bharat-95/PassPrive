@@ -18,18 +18,28 @@ import supabase from '../supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '@env';
+import {
+  GOOGLE_ICON_IMAGE,
+  PASSPRIVE_LOGO_IMAGE,
+  isAuthAssetsReady,
+  preloadAuthAssets,
+} from '../components/authAssets';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Signup() {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const [imagesReady, setImagesReady] = useState(isAuthAssetsReady());
+
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID,
       iosClientId: GOOGLE_IOS_CLIENT_ID,
     });
+
+    preloadAuthAssets().finally(() => setImagesReady(true));
   }, []);
-  const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -125,29 +135,37 @@ export default function Signup() {
     }
   };
 
+  if (!imagesReady) {
+    return (
+      <View style={styles.imageLoaderWrap}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAwareScrollView
       style={styles.container}
-      contentContainerStyle={{ flexGrow: 1 }}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
       {/* Purple gradient brand section */}
       <LinearGradient
         colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
-        style={[styles.brandSection, { paddingTop: insets.top + SCREEN_HEIGHT * 0.05 }]}
+        style={styles.brandSection}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
         {/* Skip Button */}
         <TouchableOpacity 
-          style={[styles.skipButton, { top: (insets?.top || 0) + 8 }]}
+          style={[styles.skipButton, { top: Math.max((insets?.top || 0) - 6, 0) }]}
           onPress={() => navigation.navigate('Home')}
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
         
         <Image
-          source={require('../assets/passprrive.png')}
+          source={PASSPRIVE_LOGO_IMAGE}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -238,7 +256,7 @@ export default function Signup() {
           ) : (
             <>
               <Image
-                source={require('../assets/google.png')}
+                source={GOOGLE_ICON_IMAGE}
                 style={styles.googleIcon}
                 resizeMode="contain"
               />
@@ -260,13 +278,24 @@ export default function Signup() {
 }
 
 const styles = StyleSheet.create({
+  imageLoaderWrap: {
+    flex: 1,
+    backgroundColor: '#8F3AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: '#8F3AFF',
   },
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: '#8F3AFF',
+  },
   brandSection: {
-    paddingVertical: SCREEN_HEIGHT * 0.04,
-    paddingBottom: SCREEN_HEIGHT * 0.05,
+    height: SCREEN_HEIGHT * 0.25,
+    paddingTop: 0,
+    paddingBottom: SCREEN_HEIGHT * 0.015,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -287,9 +316,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   logo: {
-    width: SCREEN_WIDTH * 0.55,
+    width: SCREEN_WIDTH * 0.56,
     height: SCREEN_HEIGHT * 0.08,
-    marginBottom: SCREEN_HEIGHT * 0.008,
+    marginBottom: SCREEN_HEIGHT * 0.004,
   },
   tagline: {
     fontSize: SCREEN_WIDTH * 0.035,
@@ -299,10 +328,11 @@ const styles = StyleSheet.create({
   formSection: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingHorizontal: SCREEN_WIDTH * 0.07,
     paddingTop: SCREEN_HEIGHT * 0.036,
+    marginTop: -1,
   },
   title: {
     fontSize: SCREEN_WIDTH * 0.08,
@@ -343,7 +373,6 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     paddingVertical: SCREEN_HEIGHT * 0.02,
     alignItems: 'center',
-    marginTop: SCREEN_HEIGHT * 0.02,
     marginBottom: SCREEN_HEIGHT * 0.028,
   },
   signupText: {

@@ -171,7 +171,7 @@ function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Splash">
         {() => (
-          <ScreenWrapper>
+          <ScreenWrapper safeColor="#5800AB">
             <Splash />
           </ScreenWrapper>
         )}
@@ -179,7 +179,7 @@ function AppNavigator() {
 
       <Stack.Screen name="Login" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper>
+          <ScreenWrapper safeColor="#5800AB">
             <Login />
           </ScreenWrapper>
         )}
@@ -195,7 +195,7 @@ function AppNavigator() {
 
       <Stack.Screen name="Signup" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper>
+          <ScreenWrapper safeColor="#5800AB">
             <Signup />
           </ScreenWrapper>
         )}

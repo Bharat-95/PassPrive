@@ -18,12 +18,7 @@ export default function Onboarding() {
   const insets = useSafeAreaInsets();
 
   return (
-    <LinearGradient
-      colors={['#5800AB', '#8F3AFF', '#9F3AFF']}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <View style={styles.container}>
       {/* Main content */}
       <View style={styles.mainContent}>
         {/* Logo and tagline section */}
@@ -83,13 +78,14 @@ export default function Onboarding() {
           </View>
         </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#8F3AFF',
   },
   mainContent: {
     flex: 1,
@@ -110,10 +106,10 @@ const styles = StyleSheet.create({
   },
   bottomGradient: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
-    height: SCREEN_HEIGHT * 0.35,
+    bottom: 0,
+    height: SCREEN_HEIGHT * 0.24,
   },
   skipButton: {
     position: 'absolute',
@@ -168,7 +164,7 @@ const styles = StyleSheet.create({
     paddingTop: SCREEN_HEIGHT * 0.035,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    marginTop: -10,
+    marginTop: 0,
   },
   createAccountBtn: {
     backgroundColor: '#2D2D2D',
