@@ -8,24 +8,66 @@ import {
   Dimensions,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import LinearGradient from 'react-native-linear-gradient';
-import supabase from '../supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '@env';
+import supabase from '../supabase';
 import {
   GOOGLE_ICON_IMAGE,
   PASSPRIVE_LOGO_IMAGE,
   isAuthAssetsReady,
   preloadAuthAssets,
 } from '../components/authAssets';
+import { markLastLogin } from '../services/userActivity';
+import AuthLoadingSkeleton from '../components/AuthLoadingSkeleton';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const IS_SHORT_SCREEN = SCREEN_HEIGHT <= 760;
+const BRAND_SECTION_HEIGHT = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.19 : SCREEN_HEIGHT * 0.25;
+const FORM_TOP_PADDING = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.024 : SCREEN_HEIGHT * 0.036;
+const SUBTITLE_MARGIN_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.024 : SCREEN_HEIGHT * 0.04;
+const INPUT_MARGIN_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.009 : SCREEN_HEIGHT * 0.013;
+const INPUT_PADDING_VERTICAL = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.014 : SCREEN_HEIGHT * 0.018;
+const CTA_PADDING_VERTICAL = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.016 : SCREEN_HEIGHT * 0.02;
+const CTA_MARGIN_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.018 : SCREEN_HEIGHT * 0.028;
+const LOGIN_ROW_PADDING_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.024 : SCREEN_HEIGHT * 0.04;
+const GOOGLE_SIGNUP_FALLBACK_ERROR = 'Unable to continue with Google. Please try again.';
+const showError = message => Alert.alert('Signup Error', message);
+const showInfo = message => Alert.alert('Notice', message);
+
+const sanitizeGoogleSignupMessage = err => {
+  const code = String(err?.code || '');
+  const message = String(err?.message || '').toLowerCase();
+
+  if (code === 'SIGN_IN_CANCELLED' || code === '12501' || message.includes('cancel')) {
+    return 'Google sign-in was cancelled.';
+  }
+
+  if (message.includes('play services')) {
+    return 'Google Play Services is unavailable. Please update and try again.';
+  }
+
+  if (message.includes('network')) {
+    return 'Network error. Please check your connection and try again.';
+  }
+
+  if (message.includes('id_token') || message.includes('id token')) {
+    return 'Unable to verify your Google account. Please try again.';
+  }
+
+  if (message.includes('invalid') || message.includes('credential')) {
+    return 'Google authentication failed. Please try again.';
+  }
+
+  return GOOGLE_SIGNUP_FALLBACK_ERROR;
+};
 
 export default function Signup() {
   const navigation = useNavigation();
@@ -47,42 +89,73 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
+  const [transitionLoading, setTransitionLoading] = useState(false);
+
+  const syncUserProfile = async (user, fallbackName = '') => {
+    if (!user?.id) return false;
+    const now = new Date().toISOString();
+
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (existingUser) {
+      await supabase
+        .from('users')
+        .update({ last_login: now, last_opened: now, updated_at: now })
+        .eq('id', user.id);
+      return true;
+    }
+
+    const { error } = await supabase.from('users').insert({
+      id: user.id,
+      email: user.email,
+      full_name: fallbackName || user.user_metadata?.full_name || '',
+      created_at: new Date(),
+      last_login: now,
+      last_opened: now,
+    });
+
+    return !error;
+  };
 
   const handleSignup = async () => {
     if (!fullName || !email || !password) {
-      alert('Please fill in all fields');
+      showInfo('Please fill in all fields.');
       return;
     }
 
     setLoading(true);
     try {
-      // Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { full_name: fullName || null },
+        },
       });
 
       if (error) {
-        alert(error.message);
+        showError(error.message || 'Signup failed.');
         setLoading(false);
         return;
       }
 
-      // Insert user into users table
-      const user = data.user || (data.session && data.session.user);
+      const user = data?.user || data?.session?.user;
       if (user) {
-        await supabase.from('users').insert({
-          id: user.id,
-          email: user.email,
-          full_name: fullName,
-          created_at: new Date(),
-        });
+        await syncUserProfile(user, fullName);
+        await AsyncStorage.setItem('auth_user', JSON.stringify(user));
       }
 
-      alert('Signup successful! Please check your email for verification.');
-      navigation.replace('Login');
+      await AsyncStorage.setItem('isLoggedIn', 'true');
+      await markLastLogin();
+      setTransitionLoading(true);
+      navigation.replace('Details');
     } catch (err) {
-      alert('Signup failed. Please try again.');
+      showError('Signup failed. Please try again.');
+      setTransitionLoading(false);
     } finally {
       setLoading(false);
     }
@@ -90,46 +163,39 @@ export default function Signup() {
 
   const handleGoogleSignup = async () => {
     try {
-      if (!GOOGLE_WEB_CLIENT_ID) {
-        throw new Error('Missing GOOGLE_WEB_CLIENT_ID. Please set it in your .env file.');
-      }
       setSocialLoading(true);
       await GoogleSignin.hasPlayServices();
       await GoogleSignin.signOut();
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.idToken || (userInfo.data && userInfo.data.idToken);
-      if (!idToken) throw new Error('id_token missing');
+
+      if (!idToken) {
+        showError('Unable to verify your Google account. Please try again.');
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
+
       if (error) {
-        alert(error.message);
-        setSocialLoading(false);
+        showError(sanitizeGoogleSignupMessage(error));
         return;
       }
+
       await AsyncStorage.setItem('isLoggedIn', 'true');
-      // Insert user into users table if not exists
-      const user = data.user;
-      if (user) {
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        if (!existingUser) {
-          await supabase.from('users').insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || '',
-            created_at: new Date(),
-          });
-        }
+      if (data?.user) {
+        await AsyncStorage.setItem('auth_user', JSON.stringify(data.user));
       }
-      alert('Google signup successful!');
-      navigation.replace('Home');
+      await syncUserProfile(data?.user);
+      await markLastLogin();
+
+      setTransitionLoading(true);
+      navigation.replace('Details');
     } catch (err) {
-      alert(err.message || 'Google signup failed.');
+      showError(sanitizeGoogleSignupMessage(err));
+      setTransitionLoading(false);
     } finally {
       setSocialLoading(false);
     }
@@ -144,15 +210,19 @@ export default function Signup() {
   }
 
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
       {/* Purple gradient brand section */}
       <LinearGradient
         colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
-        style={styles.brandSection}
+        style={[styles.brandSection, { height: BRAND_SECTION_HEIGHT }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
@@ -273,7 +343,9 @@ export default function Signup() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+      {loading || socialLoading || transitionLoading ? <AuthLoadingSkeleton /> : null}
+    </>
   );
 }
 
@@ -293,7 +365,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#8F3AFF',
   },
   brandSection: {
-    height: SCREEN_HEIGHT * 0.25,
     paddingTop: 0,
     paddingBottom: SCREEN_HEIGHT * 0.015,
     alignItems: 'center',
@@ -331,7 +402,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingHorizontal: SCREEN_WIDTH * 0.07,
-    paddingTop: SCREEN_HEIGHT * 0.036,
+    paddingTop: FORM_TOP_PADDING,
     marginTop: -1,
   },
   title: {
@@ -346,17 +417,17 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     lineHeight: SCREEN_WIDTH * 0.054,
-    marginBottom: SCREEN_HEIGHT * 0.04,
+    marginBottom: SUBTITLE_MARGIN_BOTTOM,
   },
   inputContainer: {
     position: 'relative',
-    marginBottom: SCREEN_HEIGHT * 0.013,
+    marginBottom: INPUT_MARGIN_BOTTOM,
   },
   input: {
     backgroundColor: '#EDEDED',
     borderRadius: 8,
     paddingHorizontal: SCREEN_WIDTH * 0.04,
-    paddingVertical: SCREEN_HEIGHT * 0.018,
+    paddingVertical: INPUT_PADDING_VERTICAL,
     fontSize: SCREEN_WIDTH * 0.04,
     color: '#2D2D2D',
     borderWidth: 1,
@@ -371,9 +442,9 @@ const styles = StyleSheet.create({
   signupBtn: {
     backgroundColor: '#2D2D2D',
     borderRadius: 35,
-    paddingVertical: SCREEN_HEIGHT * 0.02,
+    paddingVertical: CTA_PADDING_VERTICAL,
     alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.028,
+    marginBottom: CTA_MARGIN_BOTTOM,
   },
   signupText: {
     color: '#FFFFFF',
@@ -421,7 +492,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: SCREEN_HEIGHT * 0.04,
+    paddingBottom: LOGIN_ROW_PADDING_BOTTOM,
   },
   loginPrompt: {
     fontSize: SCREEN_WIDTH * 0.037,

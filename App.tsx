@@ -11,6 +11,7 @@ import {
   View,
   Platform,
   PermissionsAndroid,
+  AppState,
   useColorScheme,
 } from 'react-native';
 
@@ -55,6 +56,7 @@ import { GOOGLE_MAPS_API_KEY } from '@env';
 
 import { LightThemeColors, DarkThemeColors } from './theme/theme';
 import { AuthProvider } from './context/AuthContext';
+import { markLastOpened } from './services/userActivity';
 
 // ---------------------------------------------------------------------
 // CONTEXTS
@@ -171,9 +173,9 @@ function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Splash">
         {() => (
-          <ScreenWrapper safeColor="#5800AB">
+          <EdgeToEdgeWrapper>
             <Splash />
-          </ScreenWrapper>
+          </EdgeToEdgeWrapper>
         )}
       </Stack.Screen>
 
@@ -252,7 +254,7 @@ function AppNavigator() {
 
       <Stack.Screen name="Details">
         {() => (
-          <ScreenWrapper>
+          <ScreenWrapper safeColor="#5800AB">
             <Details />
           </ScreenWrapper>
         )}
@@ -515,6 +517,10 @@ export default function App() {
 
             setLocationText(text);
             await AsyncStorage.setItem('user_location', text);
+            await AsyncStorage.setItem(
+              'user_location_coords',
+              JSON.stringify({ latitude, longitude }),
+            );
           } catch {
             setLocationText(saved || 'Unable to fetch');
           }
@@ -525,6 +531,18 @@ export default function App() {
     };
 
     init();
+  }, []);
+
+  useEffect(() => {
+    markLastOpened();
+
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        markLastOpened();
+      }
+    });
+
+    return () => sub.remove();
   }, []);
 
   const locationValue = useMemo(() => locationText, [locationText]);

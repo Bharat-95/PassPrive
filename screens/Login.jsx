@@ -24,6 +24,8 @@ import {
   isAuthAssetsReady,
   preloadAuthAssets,
 } from '../components/authAssets';
+import { markLastLogin } from '../services/userActivity';
+import AuthLoadingSkeleton from '../components/AuthLoadingSkeleton';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,6 +38,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
+  const [transitionLoading, setTransitionLoading] = useState(false);
   const [imagesReady, setImagesReady] = useState(isAuthAssetsReady());
 
   // ---------------------------
@@ -55,6 +58,8 @@ export default function Login() {
   // ----------------------------------------------------------
   const checkUserInTable = async (user) => {
     try {
+      const now = new Date().toISOString();
+
       // Check if already exists
       const { data: existingUser } = await supabase
         .from('users')
@@ -63,6 +68,11 @@ export default function Login() {
         .single();
 
       if (existingUser) {
+        await supabase
+          .from('users')
+          .update({ last_login: now, last_opened: now, updated_at: now })
+          .eq('id', user.id);
+        setTransitionLoading(true);
         navigation.replace('Home');
         return;
       }
@@ -72,11 +82,15 @@ export default function Login() {
         id: user.id,
         email: user.email,
         created_at: new Date(),
+        last_login: now,
+        last_opened: now,
       });
 
+      setTransitionLoading(true);
       navigation.replace('Details');
     } catch (err) {
       console.log('User insert error:', err);
+      setTransitionLoading(false);
     }
   };
 
@@ -112,6 +126,7 @@ export default function Login() {
       }
 
       await AsyncStorage.setItem('isLoggedIn', 'true');
+      await markLastLogin();
 
       await checkUserInTable(data.user);
     } catch (err) {
@@ -144,6 +159,7 @@ export default function Login() {
     }
 
     await AsyncStorage.setItem('isLoggedIn', 'true');
+    await markLastLogin();
     await checkUserInTable(data.user);
     setLoading(false);
   };
@@ -157,11 +173,15 @@ export default function Login() {
   }
 
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
       {/* Purple gradient brand section */}
       <LinearGradient
         colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
@@ -283,7 +303,9 @@ export default function Login() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+      {loading || socialLoading || transitionLoading ? <AuthLoadingSkeleton /> : null}
+    </>
   );
 }
 

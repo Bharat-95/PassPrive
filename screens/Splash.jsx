@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated, Dimensions, Image } from "react-native";
+import { View, Text, StyleSheet, Animated, Dimensions, Image, StatusBar } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-import LinearGradient from 'react-native-linear-gradient';
+import supabase from "../supabase";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -48,19 +48,26 @@ export default function SplashScreen() {
       })
     ).start();
 
-    const checkLogin = async () => {
+    const navigateFromSplash = async () => {
       const isLogged = await AsyncStorage.getItem("isLoggedIn");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const hasSession = !!sessionData?.session?.user;
+      const shouldGoHome = isLogged === "true" && hasSession;
+
+      if (!shouldGoHome) {
+        await AsyncStorage.setItem("isLoggedIn", "false");
+      }
 
       setTimeout(() => {
         navigation.reset({
           index: 0,
-          routes: [{ name: isLogged === "true" ? "Home" : "Onboarding" }],
+          routes: [{ name: shouldGoHome ? "Home" : "Login" }],
         });
       }, 2000);
     };
 
-    checkLogin();
-  }, []);
+    navigateFromSplash();
+  }, [fadeAnim, navigation, scaleAnim, shimmerAnim, taglineFade]);
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -68,12 +75,8 @@ export default function SplashScreen() {
   });
 
   return (
-    <LinearGradient
-      colors={['#5800AB', '#8F3AFF', '#9F3AFF']}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <View style={styles.container}>
+      <StatusBar backgroundColor="#5800AB" barStyle="light-content" />
       {/* Shimmer overlay effect */}
       <Animated.View
         style={[
@@ -106,13 +109,14 @@ export default function SplashScreen() {
       <Animated.View style={[styles.bottomBranding, { opacity: taglineFade }]}>
         <Text style={styles.poweredBy}>Experience Mauritius Like Never Before</Text>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#5800AB",
     alignItems: "center",
     justifyContent: "center",
     position: 'relative',

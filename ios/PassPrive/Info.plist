@@ -56,7 +56,7 @@
 	<key>REVERSED_CLIENT_ID</key>
 	<string>com.googleusercontent.apps.292641565230-b8dkp2337t2ree5os8cctaf1cjj6bv79</string>
 	<key>UILaunchStoryboardName</key>
-	<string>Assets.xcassets</string>
+	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

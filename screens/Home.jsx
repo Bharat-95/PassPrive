@@ -17,6 +17,7 @@ import StoreFilters from '../components/StoresHome/StoreFilters';
 
 export default function HomeScreen() {
   const { colors } = useContext(ThemeContext);
+  const MIN_STICKY_SEARCH_HEIGHT = 86;
 
   const [selectedCategory, setSelectedCategory] = useState('home');
   const [collapsed, setCollapsed] = useState(false);
@@ -24,12 +25,24 @@ export default function HomeScreen() {
   const [filterY, setFilterY] = useState(9999);
   const [storeFilterY, setStoreFilterY] = useState(9999);
   const [showStickyFilters, setShowStickyFilters] = useState(false);
+  const [showStickyHomeCategories, setShowStickyHomeCategories] = useState(false);
+  const [stickySpacerHeight, setStickySpacerHeight] = useState(MIN_STICKY_SEARCH_HEIGHT);
+  const [homeInlineCategoriesEndY, setHomeInlineCategoriesEndY] = useState(9999);
+
+  // ── NEW: track the Header component's height so the sticky bar sits below it ──
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  const stickyHeaderFullHeightRef = useRef(MIN_STICKY_SEARCH_HEIGHT);
+  const homeStickyVisibleRef = useRef(false);
 
   const yOffset = useRef(new Animated.Value(0)).current;
   const listRef = useRef(null);
   const filterHeightRef = useRef(50);
   const stickyHeaderHeightRef = useRef(155);
 
+  // ---------------------------------------------------------------------------
+  // Scroll handler
+  // ---------------------------------------------------------------------------
   const onScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: yOffset } } }],
     {
@@ -41,35 +54,44 @@ export default function HomeScreen() {
           setCollapsed(offset > 80);
         }
 
-        const headerSpacerHeight = collapsed ? 155 : 230;
+        if (selectedCategory === 'home') {
+          const triggerY = Math.max(
+            0,
+            stickySpacerHeight + homeInlineCategoriesEndY + 8,
+          );
+          const hideY = Math.max(0, triggerY - 40);
+          const isVisible = homeStickyVisibleRef.current;
+
+          if (!isVisible && offset >= triggerY) {
+            homeStickyVisibleRef.current = true;
+            setShowStickyHomeCategories(true);
+          } else if (isVisible && offset <= hideY) {
+            homeStickyVisibleRef.current = false;
+            setShowStickyHomeCategories(false);
+          }
+        } else {
+          homeStickyVisibleRef.current = true;
+          setShowStickyHomeCategories(true);
+        }
+
+        const headerSpacerHeight = stickySpacerHeight;
         stickyHeaderHeightRef.current = headerSpacerHeight;
 
-        // ✅ FIXED: Different calculation for dining vs stores
         if (selectedCategory === 'dining') {
-          // For dining: Show sticky when non-sticky filters reach the category bottom
-          // Need much larger offset because filterY measurement seems higher
           const stickyStart = filterY - headerSpacerHeight - filterHeightRef.current;
-          
-          if (offset >= stickyStart) {
-            setShowStickyFilters(true);
-          } else {
-            setShowStickyFilters(false);
-          }
+          setShowStickyFilters(offset >= stickyStart);
         } else if (selectedCategory === 'stores') {
-          // For stores: Original calculation works fine
           const filterBottom = storeFilterY + filterHeightRef.current;
           const stickyStart = filterBottom - headerSpacerHeight - 50;
-          
-          if (offset >= stickyStart) {
-            setShowStickyFilters(true);
-          } else {
-            setShowStickyFilters(false);
-          }
+          setShowStickyFilters(offset >= stickyStart);
         }
       },
     },
   );
 
+  // ---------------------------------------------------------------------------
+  // Category selection
+  // ---------------------------------------------------------------------------
   const onSelectCategory = key => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
     yOffset.setValue(0);
@@ -80,17 +102,37 @@ export default function HomeScreen() {
     if (key === 'home') {
       setForceCollapsed(false);
       setCollapsed(false);
+      homeStickyVisibleRef.current = false;
+      setShowStickyHomeCategories(false);
       return;
     }
 
     setForceCollapsed(true);
     setCollapsed(true);
+    setShowStickyHomeCategories(true);
   };
 
+  // ---------------------------------------------------------------------------
+  // Content renderer
+  // ---------------------------------------------------------------------------
   const renderContent = () => {
     switch (selectedCategory) {
       case 'home':
-        return <HomeContent />;
+        return (
+          <HomeContent
+            onInlineCategoriesLayout={endY => {
+              setHomeInlineCategoriesEndY(endY);
+            }}
+            renderInlineCategories={
+              <HomeCategories
+                variant="inline"
+                collapsed={false}
+                selected={selectedCategory}
+                onSelect={onSelectCategory}
+              />
+            }
+          />
+        );
       case 'dining':
         return (
           <DiningHome
@@ -108,7 +150,7 @@ export default function HomeScreen() {
           />
         );
       //case 'events':
-      //return <EventsHome />;
+      //  return <EventsHome />;
       case 'sports':
         return <SportsHome />;
       default:
@@ -118,42 +160,59 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header />
 
-      {/* Sticky Search + Categories */}
+      {/*
+        Measure the Header height so the sticky search bar can sit exactly
+        below it — no overlap, no gap.
+      */}
+      <View
+        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
+        <Header />
+      </View>
+
+      {/* ── Sticky Search + Categories ─────────────────────────────────────
+          top = headerHeight so it starts right below the Header, never on top of it.
+      ──────────────────────────────────────────────────────────────────── */}
       <Animated.View
         style={[
           styles.stickySearchContainer,
           {
+            top: headerHeight,            // ← KEY FIX: sits below Header
             backgroundColor: collapsed
               ? `${colors.background}F2`
               : colors.background,
-            transform: [
-              {
-                translateY: yOffset.interpolate({
-                  inputRange: [0, 80],
-                  outputRange: [80, 0],
-                  extrapolate: 'clamp',
-                }),
-              },
-            ],
           },
         ]}
       >
-        <HomeSearchBar
-          collapsed={collapsed}
-          selectedCategory={selectedCategory}
-        />
-        <HomeCategories
-          collapsed={collapsed}
-          selected={selectedCategory}
-          onSelect={onSelectCategory}
-        />
+        <View
+          onLayout={e => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && h !== stickyHeaderFullHeightRef.current) {
+              stickyHeaderFullHeightRef.current = h;
+              setStickySpacerHeight(h);
+            }
+          }}
+        >
+          <HomeSearchBar
+            collapsed={collapsed}
+            selectedCategory={selectedCategory}
+          />
+        </View>
 
-        {/* ✅ Sticky filters appear below categories after non-sticky filters scroll past */}
+        {(selectedCategory !== 'home' || showStickyHomeCategories) && (
+          <HomeCategories
+            variant="sticky"
+            collapsed={collapsed}
+            selected={selectedCategory}
+            onSelect={onSelectCategory}
+          />
+        )}
+
+        {/* Sticky filters */}
         {selectedCategory === 'dining' && showStickyFilters && (
           <View
-            onLayout={(e) => {
+            onLayout={e => {
               filterHeightRef.current = e.nativeEvent.layout.height;
             }}
           >
@@ -163,7 +222,7 @@ export default function HomeScreen() {
 
         {selectedCategory === 'stores' && showStickyFilters && (
           <View
-            onLayout={(e) => {
+            onLayout={e => {
               filterHeightRef.current = e.nativeEvent.layout.height;
             }}
           >
@@ -172,7 +231,7 @@ export default function HomeScreen() {
         )}
       </Animated.View>
 
-      {/* Content */}
+      {/* ── Scrollable content ────────────────────────────────────────────── */}
       <Animated.FlatList
         ref={listRef}
         data={[1]}
@@ -182,7 +241,11 @@ export default function HomeScreen() {
         onScroll={onScroll}
         ListHeaderComponent={
           <>
-            <View style={{ height: collapsed ? 155 : 230 }} />
+            {/*
+              Spacer = Header height + sticky search/categories height combined.
+              This ensures content starts below both the Header and the sticky bar.
+            */}
+            <View style={{ height: headerHeight + stickySpacerHeight }} />
             {renderContent()}
           </>
         }
@@ -195,7 +258,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   stickySearchContainer: {
     position: 'absolute',
-    top: 0,
+    // top is set dynamically to headerHeight in the component
     left: 0,
     right: 0,
     zIndex: 20,

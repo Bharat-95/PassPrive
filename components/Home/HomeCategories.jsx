@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useEffect } from "react";
+import React, { useContext, useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Image,
   Pressable,
   Animated,
+  Easing,
 } from "react-native";
 import { Home } from "lucide-react-native";
 import { ThemeContext } from "../../App";
@@ -61,13 +62,12 @@ const CategoryCard = React.memo(
   }
 );
 
-export default function HomeCategories({ collapsed, selected, onSelect }) {
+export default function HomeCategories({ collapsed, selected, onSelect, variant = "auto" }) {
   const { colors } = useContext(ThemeContext);
 
-  const slideAnim = useRef(new Animated.Value(-20)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const bigOpacity = useRef(new Animated.Value(1)).current;
-  const bigSlide = useRef(new Animated.Value(0)).current;
+  const collapseAnim = useRef(new Animated.Value(collapsed ? 1 : 0)).current;
+  const [bigContentHeight, setBigContentHeight] = useState(175);
+  const [smallContentHeight, setSmallContentHeight] = useState(60);
 
   const homeButtonColors = {
     home: "#C59D5F",
@@ -79,54 +79,94 @@ export default function HomeCategories({ collapsed, selected, onSelect }) {
   const homeBg = homeButtonColors[selected] || "#C59D5F";
 
   useEffect(() => {
-    if (collapsed) {
-      Animated.parallel([
-        Animated.timing(bigOpacity, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bigSlide, {
-          toValue: -10,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(bigOpacity, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bigSlide, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: -20,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 120,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [collapsed, bigOpacity, bigSlide, slideAnim, opacityAnim]);
+    Animated.timing(collapseAnim, {
+      toValue: collapsed ? 1 : 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [collapsed, collapseAnim]);
+
+  if (variant === "inline") {
+    return (
+      <View style={styles.gridContainerStatic}>
+        <View style={styles.row}>
+          {categories.map((c) => (
+            <CategoryCard
+              key={c.key}
+              title={c.title}
+              icon={c.icon}
+              colors={colors}
+              small={false}
+              collapsed={false}
+              isActive={selected === c.key}
+              onPress={() => onSelect(c.key)}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (variant === "sticky") {
+    return (
+      <View style={styles.smallRowContainerStatic}>
+        <View style={styles.smallRow}>
+          <Pressable
+            onPress={() => onSelect("home")}
+            style={[styles.homeButton, { backgroundColor: homeBg }]}
+          >
+            <Home color="#FFF" size={20} />
+          </Pressable>
+
+          <View style={styles.categoriesRow}>
+            {categories.map((c) => (
+              <CategoryCard
+                key={c.key}
+                title={c.title}
+                icon={c.icon}
+                colors={colors}
+                small={true}
+                collapsed={true}
+                isActive={selected === c.key}
+                onPress={() => onSelect(c.key)}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  const bigHeight = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [bigContentHeight, 0],
+  });
+  const bigOpacity = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+  const bigTranslateY = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -10],
+  });
+  const bigMarginTop = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [15, 0],
+  });
+
+  const smallHeight = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, smallContentHeight],
+  });
+  const smallOpacity = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const smallTranslateY = collapseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-20, 0],
+  });
 
   return (
     <View>
@@ -135,14 +175,23 @@ export default function HomeCategories({ collapsed, selected, onSelect }) {
         style={[
           styles.gridContainer,
           {
+            height: bigHeight,
             opacity: bigOpacity,
-            transform: [{ translateY: bigSlide }],
-            height: collapsed ? 0 : "auto",
+            marginTop: bigMarginTop,
+            transform: [{ translateY: bigTranslateY }],
             overflow: "hidden",
           },
         ]}
       >
-        <View style={styles.row}>
+        <View
+          style={styles.row}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && Math.abs(h - bigContentHeight) > 1) {
+              setBigContentHeight(h);
+            }
+          }}
+        >
           {categories.map((c) => (
             <CategoryCard
               key={c.key}
@@ -163,14 +212,22 @@ export default function HomeCategories({ collapsed, selected, onSelect }) {
         style={[
           styles.smallRowContainer,
           {
-            opacity: opacityAnim,
-            transform: [{ translateY: slideAnim }],
-            height: collapsed ? 60 : 0,
+            opacity: smallOpacity,
+            transform: [{ translateY: smallTranslateY }],
+            height: smallHeight,
             overflow: "hidden",
           },
         ]}
       >
-        <View style={styles.smallRow}>
+        <View
+          style={styles.smallRow}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && Math.abs(h - smallContentHeight) > 1) {
+              setSmallContentHeight(h);
+            }
+          }}
+        >
           <Pressable
             onPress={() => onSelect("home")}
             style={[styles.homeButton, { backgroundColor: homeBg }]}
@@ -200,9 +257,16 @@ export default function HomeCategories({ collapsed, selected, onSelect }) {
 
 /* STYLES */
 const styles = StyleSheet.create({
-  gridContainer: {
+  gridContainerStatic: {
     marginHorizontal: 12,
     marginTop: 15,
+  },
+  smallRowContainerStatic: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  gridContainer: {
+    marginHorizontal: 12,
   },
   row: {
     flexDirection: "row",

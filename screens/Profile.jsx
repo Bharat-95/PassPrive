@@ -26,6 +26,8 @@ import {
 } from "lucide-react-native";
 
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 // THEME + AUTH CONTEXT
 import { ThemeContext } from "../App";
@@ -52,8 +54,16 @@ export default function Profile() {
 
   // 🔥 Logout
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigation.replace("Home");
+    try {
+      await supabase.auth.signOut();
+      await GoogleSignin.signOut().catch(() => {});
+      await AsyncStorage.multiRemove(["isLoggedIn", "auth_user"]);
+    } finally {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    }
   };
 
   // 🔥 Skeleton Component
