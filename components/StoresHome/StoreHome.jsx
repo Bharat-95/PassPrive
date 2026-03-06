@@ -1,5 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { Animated, Easing } from 'react-native';
 import StoresHero from '../StoresHome/StoresHero';
 import PayWithEase from '../StoresHome/PayWithEaseCard';
 import StoresCategory from '../StoresHome/StoresCategory';
@@ -11,6 +12,7 @@ import StoresList from '../StoresHome/StoresList';
 const StoreHome = ({ onFilterPosition }) => {
   const [filterModal, setFilterModal] = useState(false);
   const [contentTopOffset, setContentTopOffset] = useState(0);
+  const bannerAnim = useRef(new Animated.Value(0)).current;
 
   const [filters, setFilters] = useState({
     sort: null,
@@ -29,6 +31,15 @@ const StoreHome = ({ onFilterPosition }) => {
     console.log('Filters applied:', newFilters);
   };
 
+  useEffect(() => {
+    Animated.timing(bannerAnim, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [bannerAnim]);
+
   return (
     <>
       <View
@@ -36,7 +47,24 @@ const StoreHome = ({ onFilterPosition }) => {
           setContentTopOffset(e.nativeEvent.layout.y);
         }}
       >
-        <StoresHero />
+        <Animated.View
+          style={[
+            styles.bannerTopSpacing,
+            {
+              opacity: bannerAnim,
+              transform: [
+                {
+                  translateY: bannerAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <StoresHero />
+        </Animated.View>
         <StoresCategory />
         <InYourDistrict />
         <OffersForYou />
@@ -61,4 +89,8 @@ const StoreHome = ({ onFilterPosition }) => {
 
 export default StoreHome;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  bannerTopSpacing: {
+    marginTop: 30,
+  },
+});

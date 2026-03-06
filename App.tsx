@@ -223,19 +223,13 @@ function AppNavigator() {
 
       <Stack.Screen
         name="Home"
-        options={({ route }) => ({
-          animation: 'slide_from_right',
-          safeColor: (route.params as any)?.safeColor,
-        })}
+        options={{ animation: 'slide_from_right' }}
       >
-        {props => {
-          const safeColor = (props.route.params as any)?.safeColor;
-          return (
-            <ScreenWrapper safeColor={safeColor}>
-              <Home />
-            </ScreenWrapper>
-          );
-        }}
+        {() => (
+          <EdgeToEdgeWrapper>
+            <Home />
+          </EdgeToEdgeWrapper>
+        )}
       </Stack.Screen>
 
       <Stack.Screen name="Profile">

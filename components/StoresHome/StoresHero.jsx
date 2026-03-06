@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     borderBottomStartRadius: 20,
     borderBottomEndRadius:20,
     overflow: 'hidden',
-    marginTop: 10,
+    marginTop: 0,
   },
 
   bannerImage: {

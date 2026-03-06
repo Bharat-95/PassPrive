@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 
 import HomeOffers from '../Home/HomeOffers';
 import IntheMood from '../DininHome/IntheMoodFor';
@@ -13,23 +13,19 @@ import FilterModal from '../DininHome/FilterModal';
 const DineinHome = ({ onFilterPosition }) => {
   const [filterModal, setFilterModal] = useState(false);
   const [contentTopOffset, setContentTopOffset] = useState(0);
-
+  const bannerAnim = useRef(new Animated.Value(0)).current;
   const [filters, setFilters] = useState({
-    sort: null,
-    rating: null,
-    cost: null,
-    cuisines: [],
-    more: [],
+    sort: null, rating: null, cost: null, cuisines: [], more: [],
   });
 
-  const handleQuickFilter = (filter) => {
-    console.log('Quick filter applied:', filter);
-  };
-
-  const applyFilters = (newFilters) => {
-    setFilters(newFilters);
-    console.log('Filters applied:', newFilters);
-  };
+  useEffect(() => {
+    Animated.timing(bannerAnim, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [bannerAnim]);
 
   return (
     <>
@@ -38,31 +34,50 @@ const DineinHome = ({ onFilterPosition }) => {
           setContentTopOffset(e.nativeEvent.layout.y);
         }}
       >
-        <HomeOffers />
+        <Animated.View
+          style={[
+            styles.bannerTopSpacing,
+            {
+              opacity: bannerAnim,
+              transform: [
+                {
+                  translateY: bannerAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <HomeOffers />
+        </Animated.View>
         <IntheMood />
         <FoodieFrontRow />
         <InTheLimelight />
         <InyourDistrict />
-
         <RestaurantList
-          onFilterPosition={(localY) => {
-            // Calculate absolute Y position: content offset + local position
+          onFilterPosition={localY => {
             const absoluteY = contentTopOffset + localY;
             onFilterPosition?.(absoluteY);
           }}
           onOpenFilters={() => setFilterModal(true)}
-          onApplyQuickFilter={handleQuickFilter}
+          onApplyQuickFilter={filter => console.log('Quick filter:', filter)}
         />
       </View>
-
       <FilterModal
         visible={filterModal}
         onClose={() => setFilterModal(false)}
-        onApplyFilters={applyFilters}
+        onApplyFilters={f => setFilters(f)}
         currentFilters={filters}
       />
     </>
   );
 };
-
 export default DineinHome;
+
+const styles = StyleSheet.create({
+  bannerTopSpacing: {
+    marginTop: 30,
+  },
+});

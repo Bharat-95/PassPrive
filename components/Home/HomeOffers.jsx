@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -6,55 +6,76 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  Animated,
-  Easing,
 } from "react-native";
 import Video from "react-native-video";
 
 const screenWidth = Dimensions.get("window").width;
+let cachedOffers = null;
+let offersRequestPromise = null;
 
-export default function HomeOffers({ onLoadingChange }) {
+export default function HomeOffers({ onLoadingChange, onOffersCountChange }) {
   const [offers, setOffers] = useState([]);
-
-  const dropAnim = useRef(new Animated.Value(-300)).current;  
+  const hasReportedVisibleRef = useRef(false);
+  const onLoadingChangeRef = useRef(onLoadingChange);
+  const onOffersCountChangeRef = useRef(onOffersCountChange);
 
   useEffect(() => {
+    onLoadingChangeRef.current = onLoadingChange;
+  }, [onLoadingChange]);
+
+  useEffect(() => {
+    onOffersCountChangeRef.current = onOffersCountChange;
+  }, [onOffersCountChange]);
+
+  useEffect(() => {
+    hasReportedVisibleRef.current = false;
+    if (Array.isArray(cachedOffers)) {
+      setOffers(cachedOffers);
+      onOffersCountChangeRef.current?.(cachedOffers.length);
+      onLoadingChangeRef.current?.(false);
+      return;
+    }
+
+    const fetchOffers = async () => {
+      try {
+        onLoadingChangeRef.current?.(true);
+
+        if (!offersRequestPromise) {
+          offersRequestPromise = fetch(
+            `https://nxxacdlmcc.execute-api.ap-south-1.amazonaws.com/api/homeherooffers`,
+          )
+            .then(res => res.json())
+            .finally(() => {
+              offersRequestPromise = null;
+            });
+        }
+
+        const data = await offersRequestPromise;
+        const nextOffers = data.offers || [];
+        cachedOffers = nextOffers;
+        setOffers(nextOffers);
+        onOffersCountChangeRef.current?.(nextOffers.length);
+        if (!nextOffers.length) {
+          onLoadingChangeRef.current?.(false);
+        }
+      } catch (err) {
+        console.log("Offer Fetch Error:", err);
+        onOffersCountChangeRef.current?.(0);
+        onLoadingChangeRef.current?.(false);
+      }
+    };
+
     fetchOffers();
   }, []);
 
-  const fetchOffers = async () => {
-    try {
-      // 🔥 Notify parent: loading started
-      onLoadingChange?.(true);
-
-      const res = await fetch(`https://nxxacdlmcc.execute-api.ap-south-1.amazonaws.com/api/homeherooffers`);
-      const data = await res.json();
-      setOffers(data.offers || []);
-
-      // 🔥 Drop animation
-      Animated.timing(dropAnim, {
-        toValue: 0,
-        duration: 650,
-        delay: 150,
-        easing: Easing.out(Easing.exp),
-        useNativeDriver: true,
-      }).start();
-
-    } catch (err) {
-      console.log("Offer Fetch Error:", err);
-    } finally {
-      // 🔥 Notify parent: loading done
-      onLoadingChange?.(false);
-    }
-  };
+  const markBannerVisible = useCallback(() => {
+    if (hasReportedVisibleRef.current) return;
+    hasReportedVisibleRef.current = true;
+    onLoadingChangeRef.current?.(false);
+  }, []);
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        { transform: [{ translateY: dropAnim }] },
-      ]}
-    >
+    <View style={styles.container}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -70,18 +91,20 @@ export default function HomeOffers({ onLoadingChange }) {
                 repeat
                 paused={false}
                 muted
+                onLoad={markBannerVisible}
               />
             ) : (
               <Image
                 source={{ uri: item.media_url }}
                 style={styles.media}
                 resizeMode="stretch"
+                onLoad={markBannerVisible}
               />
             )}
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 }
 

@@ -20,9 +20,9 @@ const categories = [
 
 /* CARD */
 const CategoryCard = React.memo(
-  ({ title, icon, colors, small, collapsed, onPress, isActive }) => {
+  ({ title, icon, colors, small, collapsed, onPress, isActive, elevated }) => {
     const activeBorder = "#C59D5F";
-    const activeBg = "rgba(197, 157, 95, 0.18)";
+    const activeBg = "#E7D6B9";
 
     return (
       <Pressable
@@ -39,6 +39,15 @@ const CategoryCard = React.memo(
             shadowRadius: isActive ? 10 : 0,
             shadowOffset: { width: 0, height: 6 },
             elevation: isActive ? 6 : 0,
+            ...(small && elevated
+              ? {
+                  shadowColor: "#000",
+                  shadowOpacity: 0.12,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 5 },
+                  elevation: Math.max(isActive ? 6 : 0, 5),
+                }
+              : null),
           },
           pressed && { transform: [{ scale: 0.96 }] },
         ]}
@@ -62,7 +71,7 @@ const CategoryCard = React.memo(
   }
 );
 
-export default function HomeCategories({ collapsed, selected, onSelect, variant = "auto" }) {
+export default function HomeCategories({ collapsed, selected, onSelect, variant = "auto", elevated = false }) {
   const { colors } = useContext(ThemeContext);
 
   const collapseAnim = useRef(new Animated.Value(collapsed ? 1 : 0)).current;
@@ -114,7 +123,11 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
         <View style={styles.smallRow}>
           <Pressable
             onPress={() => onSelect("home")}
-            style={[styles.homeButton, { backgroundColor: homeBg }]}
+            style={[
+              styles.homeButton,
+              { backgroundColor: homeBg },
+              elevated ? styles.elevatedHomeButton : null,
+            ]}
           >
             <Home color="#FFF" size={20} />
           </Pressable>
@@ -129,6 +142,7 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
                 small={true}
                 collapsed={true}
                 isActive={selected === c.key}
+                elevated={elevated}
                 onPress={() => onSelect(c.key)}
               />
             ))}
@@ -230,7 +244,11 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
         >
           <Pressable
             onPress={() => onSelect("home")}
-            style={[styles.homeButton, { backgroundColor: homeBg }]}
+            style={[
+              styles.homeButton,
+              { backgroundColor: homeBg },
+              elevated ? styles.elevatedHomeButton : null,
+            ]}
           >
             <Home color="#FFF" size={20} />
           </Pressable>
@@ -245,6 +263,7 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
                 small={true}
                 collapsed={collapsed}
                 isActive={selected === c.key}
+                elevated={elevated}
                 onPress={() => onSelect(c.key)}
               />
             ))}
@@ -302,6 +321,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  elevatedHomeButton: {
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
   },
 
   categoriesRow: {
