@@ -41,7 +41,7 @@ export default function HomeSearchBar({ elevated = false }) {
         <Search size={20} color={colors.subtitle} />
 
         <View style={styles.placeholderWrapper}>
-          <Animated.View style={{ transform: [{ translateY }] }}>
+          <Animated.View pointerEvents="none" style={{ transform: [{ translateY }] }}>
             {placeholders.map((text, idx) => (
               <Text key={idx} style={styles.placeholder(colors)}>
                 {text}

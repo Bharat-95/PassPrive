@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Dimensions,
+  ActivityIndicator,
   Image,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -26,12 +28,37 @@ import {
 } from '../components/authAssets';
 import { markLastLogin } from '../services/userActivity';
 import AuthLoadingSkeleton from '../components/AuthLoadingSkeleton';
+import { ThemeContext } from '../App';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const IS_SHORT_SCREEN = SCREEN_HEIGHT <= 760;
+const BRAND_SECTION_HEIGHT = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.19 : SCREEN_HEIGHT * 0.25;
+const FORM_TOP_PADDING = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.024 : SCREEN_HEIGHT * 0.036;
+const SUBTITLE_MARGIN_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.024 : SCREEN_HEIGHT * 0.04;
+const INPUT_MARGIN_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.009 : SCREEN_HEIGHT * 0.013;
+const INPUT_PADDING_VERTICAL = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.014 : SCREEN_HEIGHT * 0.018;
+const CTA_PADDING_VERTICAL = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.016 : SCREEN_HEIGHT * 0.02;
+const CTA_MARGIN_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.018 : SCREEN_HEIGHT * 0.028;
+const LOGIN_ROW_PADDING_BOTTOM = IS_SHORT_SCREEN ? SCREEN_HEIGHT * 0.024 : SCREEN_HEIGHT * 0.04;
 
 export default function Login() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { mode } = useContext(ThemeContext);
+  const isDark = mode === 'dark';
+  const brandGradient = ['#5800AB', '#8F3AFF', '#8F3AFF'];
+  const formTitleColor = isDark ? '#FFFFFF' : '#1E1E1E';
+  const secondaryTextColor = isDark ? '#CFCFCF' : '#666666';
+  const linkTextColor = isDark ? '#FFFFFF' : '#000000';
+  const inputTextColor = isDark ? '#FFFFFF' : '#2D2D2D';
+  const inputBgColor = isDark ? '#2D2D2D' : '#EDEDED';
+  const inputBorderColor = isDark ? '#4A4A4A' : '#D0D0D0';
+  const placeholderColor = isDark ? '#B8B8B8' : '#999999';
+  const googleBtnBg = isDark ? '#2D2D2D' : '#FFFFFF';
+  const primaryBtnBg = isDark ? '#F1F1F1' : '#2D2D2D';
+  const primaryBtnText = isDark ? '#111111' : '#FFFFFF';
+  const formSurfaceColor = isDark ? '#2A2A2A' : '#FFFFFF';
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,6 +78,19 @@ export default function Login() {
     });
 
     preloadAuthAssets().finally(() => setImagesReady(true));
+  }, []);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardOpen(true),
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardOpen(false),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   // ----------------------------------------------------------
@@ -166,7 +206,7 @@ export default function Login() {
 
   if (!imagesReady) {
     return (
-      <View style={styles.imageLoaderWrap}>
+      <View style={[styles.imageLoaderWrap, { backgroundColor: formSurfaceColor }]}>
         <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
@@ -175,17 +215,26 @@ export default function Login() {
   return (
     <>
       <KeyboardAwareScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        style={[styles.container, { backgroundColor: formSurfaceColor }]}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: formSurfaceColor }]}
         showsVerticalScrollIndicator={false}
         bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
+        scrollEnabled={keyboardOpen}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        enableAutomaticScroll
+        enableOnAndroid
+        resetScrollToCoords={{ x: 0, y: 0 }}
+        extraScrollHeight={24}
       >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.contentWrap}>
       {/* Purple gradient brand section */}
       <LinearGradient
-        colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
-        style={styles.brandSection}
+        colors={brandGradient}
+        style={[styles.brandSection, { height: BRAND_SECTION_HEIGHT }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
@@ -206,18 +255,31 @@ export default function Login() {
       </LinearGradient>
 
       {/* Form section */}
-      <View style={styles.formSection}>
-        <Text style={styles.title}>Account Login</Text>
-        <Text style={styles.subtitle}>
+      <View style={styles.formCardWrap}>
+      <View
+        style={[
+          styles.formSection,
+          {
+            backgroundColor: formSurfaceColor,
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E8E8E8',
+            paddingBottom: Math.max(LOGIN_ROW_PADDING_BOTTOM, (insets?.bottom || 0) + 12),
+          },
+        ]}
+      >
+        <Text style={[styles.title, { color: formTitleColor }]}>Account Login</Text>
+        <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
           Welcome Back! Please login to your account
         </Text>
 
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: inputTextColor, backgroundColor: inputBgColor, borderColor: inputBorderColor },
+            ]}
             placeholder="Enter Email"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -228,9 +290,17 @@ export default function Login() {
         {/* Password Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, { paddingRight: 50 }]}
+            style={[
+              styles.input,
+              {
+                paddingRight: 50,
+                color: inputTextColor,
+                backgroundColor: inputBgColor,
+                borderColor: inputBorderColor,
+              },
+            ]}
             placeholder="Password"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -252,32 +322,38 @@ export default function Login() {
           style={styles.forgotPasswordContainer}
           onPress={() => navigation.navigate('ForgotPassword')}
         >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          <Text style={[styles.forgotPasswordText, { color: secondaryTextColor }]}>Forgot Password?</Text>
         </TouchableOpacity>
 
         {/* Login Button */}
         <TouchableOpacity
-          style={styles.loginBtn}
+          style={[styles.loginBtn, { backgroundColor: primaryBtnBg }]}
           onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={primaryBtnText} />
           ) : (
-            <Text style={styles.loginText}>Log In</Text>
+            <Text style={[styles.loginText, { color: primaryBtnText }]}>Log In</Text>
           )}
         </TouchableOpacity>
 
         {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.line} />
-          <Text style={styles.orText}>OR</Text>
+          <Text style={[styles.orText, { color: secondaryTextColor }]}>OR</Text>
           <View style={styles.line} />
         </View>
 
         {/* Google Login Button */}
         <TouchableOpacity
-          style={styles.googleBtn}
+          style={[
+            styles.googleBtn,
+            {
+              backgroundColor: googleBtnBg,
+              borderColor: isDark ? '#4A4A4A' : '#D0D0D0',
+            },
+          ]}
           onPress={handleGoogleSignIn}
           disabled={socialLoading}
         >
@@ -290,19 +366,22 @@ export default function Login() {
                 style={styles.googleIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.googleText}>Log In with Google</Text>
+              <Text style={[styles.googleText, { color: isDark ? '#FFFFFF' : '#444444' }]}>Log In with Google</Text>
             </>
           )}
         </TouchableOpacity>
 
         {/* Signup Link */}
         <View style={styles.signupRow}>
-          <Text style={styles.signupPrompt}>Don't have an account? </Text>
+          <Text style={[styles.signupPrompt, { color: secondaryTextColor }]}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-            <Text style={styles.signupLink}>Sign up</Text>
+            <Text style={[styles.signupLink, { color: linkTextColor }]}>Sign up</Text>
           </TouchableOpacity>
         </View>
       </View>
+      </View>
+      </View>
+      </TouchableWithoutFeedback>
       </KeyboardAwareScrollView>
       {loading || socialLoading || transitionLoading ? <AuthLoadingSkeleton /> : null}
     </>
@@ -318,14 +397,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#8F3AFF',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
+  },
+  contentWrap: {
+    flex: 1,
     backgroundColor: '#8F3AFF',
   },
   brandSection: {
-    height: SCREEN_HEIGHT * 0.25,
     paddingTop: 0,
     paddingBottom: SCREEN_HEIGHT * 0.015,
     alignItems: 'center',
@@ -362,9 +444,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
+    overflow: 'hidden',
+    borderWidth: 1,
     paddingHorizontal: SCREEN_WIDTH * 0.07,
-    paddingTop: SCREEN_HEIGHT * 0.036,
-    marginTop: -1,
+    paddingTop: FORM_TOP_PADDING,
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 3,
+  },
+  formCardWrap: {
+    marginTop: -34,
+    zIndex: 3,
+    backgroundColor: 'transparent',
   },
   title: {
     fontSize: SCREEN_WIDTH * 0.08,
@@ -378,17 +472,17 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     lineHeight: SCREEN_WIDTH * 0.054,
-    marginBottom: SCREEN_HEIGHT * 0.04,
+    marginBottom: SUBTITLE_MARGIN_BOTTOM,
   },
   inputContainer: {
     position: 'relative',
-    marginBottom: SCREEN_HEIGHT * 0.013,
+    marginBottom: INPUT_MARGIN_BOTTOM,
   },
   input: {
     backgroundColor: '#EDEDED',
     borderRadius: 8,
     paddingHorizontal: SCREEN_WIDTH * 0.04,
-    paddingVertical: SCREEN_HEIGHT * 0.018,
+    paddingVertical: INPUT_PADDING_VERTICAL,
     fontSize: SCREEN_WIDTH * 0.04,
     color: '#2D2D2D',
     borderWidth: 1,
@@ -412,9 +506,9 @@ const styles = StyleSheet.create({
   loginBtn: {
     backgroundColor: '#2D2D2D',
     borderRadius: 35,
-    paddingVertical: SCREEN_HEIGHT * 0.02,
+    paddingVertical: CTA_PADDING_VERTICAL,
     alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.028,
+    marginBottom: CTA_MARGIN_BOTTOM,
   },
   loginText: {
     color: '#FFFFFF',
@@ -462,7 +556,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: SCREEN_HEIGHT * 0.04,
+    paddingBottom: LOGIN_ROW_PADDING_BOTTOM,
   },
   signupPrompt: {
     fontSize: SCREEN_WIDTH * 0.037,

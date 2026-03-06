@@ -110,9 +110,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function ScreenWrapper({
   children,
   safeColor,
+  contentBg = 'background',
+  bottomSafeBg,
 }: {
   children: ReactNode;
   safeColor?: string;
+  contentBg?: 'background' | 'card' | 'signupSurface' | string;
+  bottomSafeBg?: 'background' | 'card' | 'signupSurface' | string;
 }) {
   let insets = { top: 0, bottom: 0 };
   try {
@@ -126,9 +130,17 @@ function ScreenWrapper({
   const theme = React.useContext(ThemeContext);
 
   const finalSafeColor = safeColor || theme.colors.background;
+  const resolveBg = (value?: 'background' | 'card' | 'signupSurface' | string) => {
+    if (!value || value === 'background') return theme.colors.background;
+    if (value === 'card') return theme.colors.card;
+    if (value === 'signupSurface') return theme.mode === 'dark' ? '#2A2A2A' : '#FFFFFF';
+    return value;
+  };
+  const contentBackgroundColor = resolveBg(contentBg);
+  const bottomSafeBackgroundColor = resolveBg(bottomSafeBg || contentBg);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: contentBackgroundColor }}>
       {/* STATUS BAR */}
       <View style={{ height: insets.top || 0, backgroundColor: finalSafeColor }}>
         <StatusBar
@@ -139,7 +151,7 @@ function ScreenWrapper({
       </View>
 
       {/* CONTENT */}
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View style={{ flex: 1, backgroundColor: contentBackgroundColor }}>
         {children}
       </View>
 
@@ -147,7 +159,7 @@ function ScreenWrapper({
       <View
         style={{
           height: insets.bottom || 0,
-          backgroundColor: theme.colors.background,
+          backgroundColor: bottomSafeBackgroundColor,
         }}
       />
     </View>
@@ -183,7 +195,7 @@ function AppNavigator() {
 
       <Stack.Screen name="Login" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper safeColor="#5800AB">
+          <ScreenWrapper safeColor="#5800AB" contentBg="signupSurface" bottomSafeBg="signupSurface">
             <Login />
           </ScreenWrapper>
         )}
@@ -199,7 +211,7 @@ function AppNavigator() {
 
       <Stack.Screen name="Signup" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper safeColor="#5800AB">
+          <ScreenWrapper safeColor="#5800AB" contentBg="signupSurface" bottomSafeBg="signupSurface">
             <Signup />
           </ScreenWrapper>
         )}
@@ -207,7 +219,7 @@ function AppNavigator() {
 
       <Stack.Screen name="ForgotPassword" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper safeColor="#5800AB">
+          <ScreenWrapper safeColor="#5800AB" contentBg="card" bottomSafeBg="card">
             <ForgotPassword />
           </ScreenWrapper>
         )}

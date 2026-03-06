@@ -227,6 +227,7 @@ export default function HomeScreen() {
       </Animated.View>
 
       <Animated.View
+        pointerEvents="box-none"
         style={[
           styles.stickySearchContainer,
           {
@@ -259,7 +260,7 @@ export default function HomeScreen() {
             ]}
           />
         </Animated.View>
-        <Animated.View style={{ marginTop: stickyTop }}>
+        <Animated.View pointerEvents="box-none" style={{ marginTop: stickyTop }}>
           <View
             onLayout={e => {
               const h = e.nativeEvent.layout.height;

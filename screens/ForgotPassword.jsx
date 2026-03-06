@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,32 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import supabase from '../supabase';
+import { ThemeContext } from '../App';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ForgotPassword() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { mode, colors } = useContext(ThemeContext);
+  const isDark = mode === 'dark';
+  const brandGradient = ['#5800AB', '#8F3AFF', '#8F3AFF'];
+  const secondaryTextColor = isDark ? '#CFCFCF' : '#666666';
+  const linkTextColor = isDark ? '#FFFFFF' : '#000000';
+  const inputTextColor = isDark ? '#FFFFFF' : '#2D2D2D';
+  const inputBgColor = isDark ? '#2D2D2D' : '#EDEDED';
+  const inputBorderColor = isDark ? '#4A4A4A' : '#D0D0D0';
+  const placeholderColor = isDark ? '#B8B8B8' : '#999999';
+  const formSurfaceColor = isDark ? colors.card : '#FFFFFF';
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -67,17 +83,16 @@ export default function ForgotPassword() {
   };
 
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={{ flexGrow: 1 }}
-      showsVerticalScrollIndicator={false}
-      bounces={false}
-      alwaysBounceVertical={false}
-      overScrollMode="never"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Math.max((insets?.top || 0) + 10, 10)}
+      style={[styles.container, { backgroundColor: formSurfaceColor }]}
     >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={{ flex: 1, backgroundColor: formSurfaceColor }}>
       {/* Purple gradient brand section */}
       <LinearGradient
-        colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
+        colors={brandGradient}
         style={styles.brandSection}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -101,13 +116,16 @@ export default function ForgotPassword() {
       </LinearGradient>
 
       {/* Form section */}
-      <View style={styles.formSection}>
+      <View style={[styles.formSection, { backgroundColor: formSurfaceColor }]}>
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: inputTextColor, backgroundColor: inputBgColor, borderColor: inputBorderColor },
+            ]}
             placeholder="Enter Email"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -130,9 +148,9 @@ export default function ForgotPassword() {
 
         {/* Resend Link */}
         <View style={styles.resendRow}>
-          <Text style={styles.resendPrompt}>Didn't receive the email? </Text>
+          <Text style={[styles.resendPrompt, { color: secondaryTextColor }]}>Didn't receive the email? </Text>
           <TouchableOpacity onPress={handleResend}>
-            <Text style={styles.resendLink}>Resend</Text>
+            <Text style={[styles.resendLink, { color: linkTextColor }]}>Resend</Text>
           </TouchableOpacity>
         </View>
 
@@ -141,13 +159,15 @@ export default function ForgotPassword() {
 
         {/* Sign up Link */}
         <View style={styles.signupRow}>
-          <Text style={styles.signupPrompt}>Don't have an account? </Text>
+          <Text style={[styles.signupPrompt, { color: secondaryTextColor }]}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-            <Text style={styles.signupLink}>Sign up</Text>
+            <Text style={[styles.signupLink, { color: linkTextColor }]}>Sign up</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAwareScrollView>
+      </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 

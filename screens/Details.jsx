@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import LinearGradient from 'react-native-linear-gradient';
 import supabase from '../supabase';
+import { ThemeContext } from '../App';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const showError = message => Alert.alert('Profile', message);
@@ -22,6 +23,14 @@ const showError = message => Alert.alert('Profile', message);
 export default function Details() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { mode, colors } = useContext(ThemeContext);
+  const isDark = mode === 'dark';
+  const brandGradient = ['#5800AB', '#8F3AFF', '#8F3AFF'];
+  const secondaryTextColor = isDark ? '#CFCFCF' : '#666666';
+  const inputTextColor = isDark ? '#FFFFFF' : '#2D2D2D';
+  const inputBgColor = isDark ? '#2D2D2D' : '#EDEDED';
+  const inputBorderColor = isDark ? '#4A4A4A' : '#D0D0D0';
+  const placeholderColor = isDark ? '#B8B8B8' : '#999999';
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -154,15 +163,15 @@ export default function Details() {
 
   return (
     <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      style={[styles.container, { backgroundColor: '#8F3AFF' }]}
+      contentContainerStyle={[styles.scrollContent, { backgroundColor: '#8F3AFF' }]}
       showsVerticalScrollIndicator={false}
       bounces={false}
       alwaysBounceVertical={false}
       overScrollMode="never"
     >
       <LinearGradient
-        colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
+        colors={brandGradient}
         style={styles.brandSection}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -182,32 +191,38 @@ export default function Details() {
         </View>
       </LinearGradient>
 
-      <View style={styles.formSection}>
+      <View style={[styles.formSection, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
         {loadingProfile ? (
           <ActivityIndicator size="large" color="#8F3AFF" style={styles.profileLoader} />
         ) : null}
 
         <View style={styles.inputBox}>
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={[styles.label, { color: secondaryTextColor }]}>Full Name</Text>
           <TextInput
             placeholder="Enter your full name"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={fullName}
             onChangeText={setFullName}
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: inputTextColor, backgroundColor: inputBgColor, borderColor: inputBorderColor },
+            ]}
             editable={!loadingProfile}
           />
         </View>
 
         <View style={styles.inputBox}>
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={[styles.label, { color: secondaryTextColor }]}>Phone Number</Text>
           <TextInput
             placeholder="Enter your phone number"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: inputTextColor, backgroundColor: inputBgColor, borderColor: inputBorderColor },
+            ]}
             editable={!loadingProfile}
           />
         </View>

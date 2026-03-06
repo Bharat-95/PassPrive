@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -27,6 +29,7 @@ import {
 } from '../components/authAssets';
 import { markLastLogin } from '../services/userActivity';
 import AuthLoadingSkeleton from '../components/AuthLoadingSkeleton';
+import { ThemeContext } from '../App';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const IS_SHORT_SCREEN = SCREEN_HEIGHT <= 760;
@@ -72,7 +75,22 @@ const sanitizeGoogleSignupMessage = err => {
 export default function Signup() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { mode } = useContext(ThemeContext);
+  const isDark = mode === 'dark';
+  const brandGradient = ['#5800AB', '#8F3AFF', '#8F3AFF'];
+  const formTitleColor = isDark ? '#FFFFFF' : '#1E1E1E';
+  const secondaryTextColor = isDark ? '#CFCFCF' : '#666666';
+  const linkTextColor = isDark ? '#FFFFFF' : '#000000';
+  const inputTextColor = isDark ? '#FFFFFF' : '#2D2D2D';
+  const inputBgColor = isDark ? '#2D2D2D' : '#EDEDED';
+  const inputBorderColor = isDark ? '#4A4A4A' : '#D0D0D0';
+  const placeholderColor = isDark ? '#B8B8B8' : '#999999';
+  const googleBtnBg = isDark ? '#2D2D2D' : '#FFFFFF';
+  const primaryBtnBg = isDark ? '#F1F1F1' : '#2D2D2D';
+  const primaryBtnText = isDark ? '#111111' : '#FFFFFF';
+  const formSurfaceColor = isDark ? '#2A2A2A' : '#FFFFFF';
   const [imagesReady, setImagesReady] = useState(isAuthAssetsReady());
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -81,6 +99,15 @@ export default function Signup() {
     });
 
     preloadAuthAssets().finally(() => setImagesReady(true));
+  }, []);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardOpen(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardOpen(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const [fullName, setFullName] = useState('');
@@ -203,7 +230,7 @@ export default function Signup() {
 
   if (!imagesReady) {
     return (
-      <View style={styles.imageLoaderWrap}>
+      <View style={[styles.imageLoaderWrap, { backgroundColor: formSurfaceColor }]}>
         <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
@@ -212,16 +239,25 @@ export default function Signup() {
   return (
     <>
       <KeyboardAwareScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        style={[styles.container, { backgroundColor: formSurfaceColor }]}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: formSurfaceColor }]}
         showsVerticalScrollIndicator={false}
         bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
+        scrollEnabled={keyboardOpen}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        enableAutomaticScroll
+        enableOnAndroid
+        resetScrollToCoords={{ x: 0, y: 0 }}
+        extraScrollHeight={24}
       >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.contentWrap}>
       {/* Purple gradient brand section */}
       <LinearGradient
-        colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
+        colors={brandGradient}
         style={[styles.brandSection, { height: BRAND_SECTION_HEIGHT }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -242,18 +278,31 @@ export default function Signup() {
       </LinearGradient>
 
       {/* Form section */}
-      <View style={styles.formSection}>
-        <Text style={styles.title}>Create Your Account</Text>
-        <Text style={styles.subtitle}>
+      <View style={styles.formCardWrap}>
+      <View
+        style={[
+          styles.formSection,
+          {
+            backgroundColor: formSurfaceColor,
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E8E8E8',
+            paddingBottom: Math.max(LOGIN_ROW_PADDING_BOTTOM, (insets?.bottom || 0) + 12),
+          },
+        ]}
+      >
+        <Text style={[styles.title, { color: formTitleColor }]}>Create Your Account</Text>
+        <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
           We're so excited to have you onboard!{'\n'}Fill in your details below to get started.
         </Text>
 
         {/* Full Name Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: inputTextColor, backgroundColor: inputBgColor, borderColor: inputBorderColor },
+            ]}
             placeholder="Enter Full Name"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={fullName}
             onChangeText={setFullName}
             autoCapitalize="words"
@@ -263,9 +312,12 @@ export default function Signup() {
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: inputTextColor, backgroundColor: inputBgColor, borderColor: inputBorderColor },
+            ]}
             placeholder="Enter Email"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -276,9 +328,17 @@ export default function Signup() {
         {/* Password Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, { paddingRight: 50 }]}
+            style={[
+              styles.input,
+              {
+                paddingRight: 50,
+                color: inputTextColor,
+                backgroundColor: inputBgColor,
+                borderColor: inputBorderColor,
+              },
+            ]}
             placeholder="Create Password"
-            placeholderTextColor="#999999"
+            placeholderTextColor={placeholderColor}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -297,27 +357,33 @@ export default function Signup() {
 
         {/* Sign Up Button */}
         <TouchableOpacity
-          style={styles.signupBtn}
+          style={[styles.signupBtn, { backgroundColor: primaryBtnBg }]}
           onPress={handleSignup}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={primaryBtnText} />
           ) : (
-            <Text style={styles.signupText}>Sign Up</Text>
+            <Text style={[styles.signupText, { color: primaryBtnText }]}>Sign Up</Text>
           )}
         </TouchableOpacity>
 
         {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.line} />
-          <Text style={styles.orText}>OR</Text>
+          <Text style={[styles.orText, { color: secondaryTextColor }]}>OR</Text>
           <View style={styles.line} />
         </View>
 
         {/* Google Sign Up Button */}
         <TouchableOpacity
-          style={styles.googleBtn}
+          style={[
+            styles.googleBtn,
+            {
+              backgroundColor: googleBtnBg,
+              borderColor: isDark ? '#4A4A4A' : '#D0D0D0',
+            },
+          ]}
           onPress={handleGoogleSignup}
           disabled={socialLoading}
         >
@@ -330,19 +396,22 @@ export default function Signup() {
                 style={styles.googleIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.googleText}>Sign Up with Google</Text>
+              <Text style={[styles.googleText, { color: isDark ? '#FFFFFF' : '#444444' }]}>Sign Up with Google</Text>
             </>
           )}
         </TouchableOpacity>
 
         {/* Login Link */}
         <View style={styles.loginRow}>
-          <Text style={styles.loginPrompt}>Already have an account? </Text>
+          <Text style={[styles.loginPrompt, { color: secondaryTextColor }]}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginLink}>Log In</Text>
+            <Text style={[styles.loginLink, { color: linkTextColor }]}>Log In</Text>
           </TouchableOpacity>
         </View>
       </View>
+      </View>
+      </View>
+      </TouchableWithoutFeedback>
       </KeyboardAwareScrollView>
       {loading || socialLoading || transitionLoading ? <AuthLoadingSkeleton /> : null}
     </>
@@ -352,16 +421,20 @@ export default function Signup() {
 const styles = StyleSheet.create({
   imageLoaderWrap: {
     flex: 1,
-    backgroundColor: '#8F3AFF',
+    backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
     flex: 1,
-    backgroundColor: '#8F3AFF',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
+  },
+  contentWrap: {
+    flex: 1,
     backgroundColor: '#8F3AFF',
   },
   brandSection: {
@@ -401,9 +474,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
+    overflow: 'hidden',
+    borderWidth: 1,
     paddingHorizontal: SCREEN_WIDTH * 0.07,
     paddingTop: FORM_TOP_PADDING,
-    marginTop: -1,
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 3,
+  },
+  formCardWrap: {
+    marginTop: -34,
+    zIndex: 3,
+    backgroundColor: 'transparent',
   },
   title: {
     fontSize: SCREEN_WIDTH * 0.08,
