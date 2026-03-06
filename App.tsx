@@ -203,9 +203,9 @@ function AppNavigator() {
 
       <Stack.Screen name="Onboarding" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper>
+          <EdgeToEdgeWrapper>
             <Onboarding />
-          </ScreenWrapper>
+          </EdgeToEdgeWrapper>
         )}
       </Stack.Screen>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,29 @@ import {
   StyleSheet,
   Image,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import { ThemeContext } from '../App';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Onboarding() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { mode } = useContext(ThemeContext);
+  const isDark = mode === 'dark';
+  const formSurfaceColor = isDark ? '#2A2A2A' : '#FFFFFF';
+  const primaryBtnBg = isDark ? '#F1F1F1' : '#2D2D2D';
+  const primaryBtnText = isDark ? '#111111' : '#FFFFFF';
+  const secondaryTextColor = isDark ? '#CFCFCF' : '#737373';
+  const linkTextColor = isDark ? '#FFFFFF' : '#000000';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: formSurfaceColor }]}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       {/* Main content */}
       <View style={styles.mainContent}>
         {/* Logo and tagline section */}
@@ -62,20 +72,31 @@ export default function Onboarding() {
         </View>
 
         {/* Action buttons */}
-        <View style={[styles.actionSection, { paddingBottom: (insets?.bottom || 0) + 32 }]}>
+        <View style={styles.formCardWrap}>
+        <View
+          style={[
+            styles.actionSection,
+            {
+              backgroundColor: formSurfaceColor,
+              borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E8E8E8',
+              paddingBottom: (insets?.bottom || 0) + 32,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={styles.createAccountBtn}
+            style={[styles.createAccountBtn, { backgroundColor: primaryBtnBg }]}
             onPress={() => navigation.navigate('Signup')}
           >
-            <Text style={styles.createAccountText}>Create Account</Text>
+            <Text style={[styles.createAccountText, { color: primaryBtnText }]}>Create Account</Text>
           </TouchableOpacity>
 
           <View style={styles.loginRow}>
-            <Text style={styles.loginPrompt}>Already have an account? </Text>
+            <Text style={[styles.loginPrompt, { color: secondaryTextColor }]}>Already have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Login</Text>
+              <Text style={[styles.loginLink, { color: linkTextColor }]}>Login</Text>
             </TouchableOpacity>
           </View>
+        </View>
         </View>
       </View>
     </View>
@@ -147,8 +168,9 @@ const styles = StyleSheet.create({
   },
   purpleSection: {
     paddingHorizontal: SCREEN_WIDTH * 0.06,
-    paddingVertical: SCREEN_HEIGHT * 0.03,
-    justifyContent: 'flex-end',
+    paddingTop: SCREEN_HEIGHT * 0.006,
+    paddingBottom: SCREEN_HEIGHT * 0.006,
+    justifyContent: 'center',
     flex: 1,
   },
   purpleText: {
@@ -164,7 +186,18 @@ const styles = StyleSheet.create({
     paddingTop: SCREEN_HEIGHT * 0.035,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
+    borderWidth: 1,
     marginTop: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 3,
+  },
+  formCardWrap: {
+    marginTop: -34,
+    zIndex: 3,
+    backgroundColor: 'transparent',
   },
   createAccountBtn: {
     backgroundColor: '#2D2D2D',

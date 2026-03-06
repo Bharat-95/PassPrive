@@ -61,7 +61,7 @@ export default function SplashScreen() {
       setTimeout(() => {
         navigation.reset({
           index: 0,
-          routes: [{ name: shouldGoHome ? "Home" : "Login" }],
+          routes: [{ name: shouldGoHome ? "Home" : "Onboarding" }],
         });
       }, 2000);
     };
