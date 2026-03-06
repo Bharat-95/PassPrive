@@ -8,12 +8,15 @@ import {
   Dimensions,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import supabase from '../supabase';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,36 +31,64 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
-    if (!newPassword || !confirmPassword) {
-      alert('Please fill in both password fields');
+    const trimmedPassword = newPassword.trim();
+    const trimmedConfirm = confirmPassword.trim();
+
+    if (!trimmedPassword || !trimmedConfirm) {
+      Alert.alert('Missing Details', 'Please fill in both password fields.');
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      alert('Passwords do not match');
+    if (trimmedPassword !== trimmedConfirm) {
+      Alert.alert('Password Mismatch', 'Passwords do not match.');
       return;
     }
 
-    if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters long');
+    if (trimmedPassword.length < 8) {
+      Alert.alert(
+        'Weak Password',
+        'Use at least 8 characters for better security.',
+      );
       return;
     }
 
     setLoading(true);
     try {
-      // Add your password reset logic here
-      console.log('Resetting password:', newPassword);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert('Password reset successful!');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
+      const { data: sessionData } = await supabase.auth.getSession();
+      const hasRecoverySession = !!sessionData?.session?.user;
+
+      if (!hasRecoverySession) {
+        Alert.alert(
+          'Invalid Reset Session',
+          'Open the latest reset link from your email and try again.',
+        );
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: trimmedPassword,
       });
-    } catch (error) {
-      alert('Error resetting password. Please try again.');
+
+      if (error) {
+        Alert.alert('Reset Failed', error.message || 'Unable to reset password.');
+        return;
+      }
+
+      await supabase.auth.signOut();
+      await AsyncStorage.multiRemove(['isLoggedIn', 'auth_user']);
+
+      Alert.alert('Password Updated', 'Your password has been reset successfully.', [
+        {
+          text: 'Go to Login',
+          onPress: () =>
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            }),
+        },
+      ]);
+    } catch {
+      Alert.alert('Reset Failed', 'Error resetting password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -66,13 +97,15 @@ export default function ResetPassword() {
   return (
     <KeyboardAwareScrollView
       style={styles.container}
-      contentContainerStyle={{ flexGrow: 1 }}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      bounces={false}
+      alwaysBounceVertical={false}
+      overScrollMode="never"
     >
-      {/* Purple gradient brand section */}
       <LinearGradient
         colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
-        style={[styles.brandSection, { paddingTop: insets.top + SCREEN_HEIGHT * 0.05 }]}
+        style={[styles.brandSection, { paddingTop: (insets?.top || 0) + SCREEN_HEIGHT * 0.03 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
@@ -83,22 +116,21 @@ export default function ResetPassword() {
         />
       </LinearGradient>
 
-      {/* Form section */}
       <View style={styles.formSection}>
-        <Text style={styles.title}>Reset Password</Text>
+        <Text style={styles.title}>Set New Password</Text>
         <Text style={styles.subtitle}>
-          Please ensure both the passwords match.
+          Enter a strong new password to secure your account.
         </Text>
 
-        {/* New Password Input */}
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, { paddingRight: 50 }]}
-            placeholder="Create New Password"
+            placeholder="New Password"
             placeholderTextColor="#999999"
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry={!showNewPassword}
+            autoCapitalize="none"
           />
           <TouchableOpacity
             style={styles.eyeIcon}
@@ -112,15 +144,15 @@ export default function ResetPassword() {
           </TouchableOpacity>
         </View>
 
-        {/* Confirm Password Input */}
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, { paddingRight: 50 }]}
-            placeholder="Re-enter New Password"
+            placeholder="Confirm New Password"
             placeholderTextColor="#999999"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry={!showConfirmPassword}
+            autoCapitalize="none"
           />
           <TouchableOpacity
             style={styles.eyeIcon}
@@ -134,21 +166,25 @@ export default function ResetPassword() {
           </TouchableOpacity>
         </View>
 
-        {/* Confirm Button */}
         <TouchableOpacity
-          style={styles.confirmBtn}
+          style={[styles.confirmBtn, loading && styles.disabledBtn]}
           onPress={handleConfirm}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.confirmText}>Confirm</Text>
+            <Text style={styles.confirmText}>Update Password</Text>
           )}
         </TouchableOpacity>
 
-        {/* Spacer to push everything up */}
-        <View style={styles.spacer} />
+        <TouchableOpacity
+          style={styles.backToLogin}
+          onPress={() => navigation.navigate('Login')}
+          disabled={loading}
+        >
+          <Text style={styles.backToLoginText}>Back to Login</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAwareScrollView>
   );
@@ -159,51 +195,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#8F3AFF',
   },
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: '#8F3AFF',
+  },
   brandSection: {
-    paddingVertical: SCREEN_HEIGHT * 0.04,
-    paddingBottom: SCREEN_HEIGHT * 0.05,
+    minHeight: SCREEN_HEIGHT * 0.22,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: SCREEN_HEIGHT * 0.03,
   },
   logo: {
-    width: SCREEN_WIDTH * 0.55,
+    width: SCREEN_WIDTH * 0.56,
     height: SCREEN_HEIGHT * 0.08,
-    marginBottom: SCREEN_HEIGHT * 0.008,
-  },
-  tagline: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#FFFFFF',
-    fontWeight: '400',
   },
   formSection: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingHorizontal: SCREEN_WIDTH * 0.07,
     paddingTop: SCREEN_HEIGHT * 0.036,
   },
   title: {
-    fontSize: SCREEN_WIDTH * 0.08,
-    fontWeight: '600',
+    fontSize: SCREEN_WIDTH * 0.075,
+    fontWeight: '700',
     color: '#1E1E1E',
     textAlign: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.015,
+    marginBottom: SCREEN_HEIGHT * 0.012,
   },
   subtitle: {
     fontSize: SCREEN_WIDTH * 0.037,
     color: '#666666',
     textAlign: 'center',
     lineHeight: SCREEN_WIDTH * 0.054,
-    marginBottom: SCREEN_HEIGHT * 0.04,
+    marginBottom: SCREEN_HEIGHT * 0.035,
   },
   inputContainer: {
     position: 'relative',
-    marginBottom: SCREEN_HEIGHT * 0.018,
+    marginBottom: SCREEN_HEIGHT * 0.015,
   },
   input: {
     backgroundColor: '#EDEDED',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: SCREEN_WIDTH * 0.04,
     paddingVertical: SCREEN_HEIGHT * 0.018,
     fontSize: SCREEN_WIDTH * 0.04,
@@ -214,7 +248,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: SCREEN_WIDTH * 0.04,
-    top: SCREEN_HEIGHT * 0.018,
+    top: SCREEN_HEIGHT * 0.017,
     padding: 4,
   },
   confirmBtn: {
@@ -222,14 +256,23 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     paddingVertical: SCREEN_HEIGHT * 0.02,
     alignItems: 'center',
-    marginTop: SCREEN_HEIGHT * 0.02,
+    marginTop: SCREEN_HEIGHT * 0.014,
+  },
+  disabledBtn: {
+    opacity: 0.7,
   },
   confirmText: {
     color: '#FFFFFF',
     fontSize: SCREEN_WIDTH * 0.042,
     fontWeight: '600',
   },
-  spacer: {
-    flex: 1,
+  backToLogin: {
+    alignItems: 'center',
+    marginTop: SCREEN_HEIGHT * 0.022,
+  },
+  backToLoginText: {
+    fontSize: SCREEN_WIDTH * 0.037,
+    color: '#6F6F6F',
+    fontWeight: '600',
   },
 });

@@ -32,6 +32,16 @@
 				<string>com.googleusercontent.apps.292641565230-b8dkp2337t2ree5os8cctaf1cjj6bv79</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>passprive.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>passprive</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>

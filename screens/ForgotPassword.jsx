@@ -8,40 +8,55 @@ import {
   Dimensions,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import LinearGradient from 'react-native-linear-gradient';
+import supabase from '../supabase';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ForgotPassword() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleReceiveLink = async () => {
-    if (!email) {
-      alert('Please enter your email address');
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      Alert.alert('Missing Email', 'Please enter your email address.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
     setLoading(true);
     try {
-      // Add your forgot password logic here
-      console.log('Sending reset link to:', email);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert('Password reset link sent to your email!');
-      // Navigate to reset password screen or back to login
-      // navigation.navigate('ResetPassword');
-    } catch (error) {
-      alert('Error sending reset link. Please try again.');
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        {
+          redirectTo: 'passprive://reset-password',
+        },
+      );
+
+      if (error) {
+        Alert.alert('Reset Failed', error.message || 'Unable to send reset email.');
+        return;
+      }
+
+      Alert.alert(
+        'Reset Link Sent',
+        'If this email is registered, you will receive a password reset link shortly.',
+      );
+    } catch {
+      Alert.alert('Reset Failed', 'Error sending reset link. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -56,29 +71,37 @@ export default function ForgotPassword() {
       style={styles.container}
       contentContainerStyle={{ flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
+      bounces={false}
+      alwaysBounceVertical={false}
+      overScrollMode="never"
     >
       {/* Purple gradient brand section */}
       <LinearGradient
         colors={['#5800AB', '#8F3AFF', '#8F3AFF']}
-        style={[styles.brandSection, { paddingTop: insets.top + SCREEN_HEIGHT * 0.05 }]}
+        style={styles.brandSection}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
+        <TouchableOpacity
+          style={styles.skipButton}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
+
         <Image
           source={require('../assets/passprrive.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.tagline}>Your Pass to the Island's Best.</Text>
-      </LinearGradient>
-
-      {/* Form section */}
-      <View style={styles.formSection}>
         <Text style={styles.title}>Forgot Password?</Text>
         <Text style={styles.subtitle}>
           No worries, enter your email to receive a link to set a new password.
         </Text>
+      </LinearGradient>
 
+      {/* Form section */}
+      <View style={styles.formSection}>
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <TextInput
@@ -134,42 +157,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#8F3AFF',
   },
   brandSection: {
-    paddingVertical: SCREEN_HEIGHT * 0.04,
-    paddingBottom: SCREEN_HEIGHT * 0.05,
+    height: SCREEN_HEIGHT * 0.3,
+    paddingTop: 0,
+    paddingBottom: SCREEN_HEIGHT * 0.03,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  skipButton: {
+    position: 'absolute',
+    top: SCREEN_HEIGHT * 0.018,
+    right: SCREEN_WIDTH * 0.04,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: SCREEN_WIDTH * 0.038,
+    paddingVertical: SCREEN_HEIGHT * 0.008,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  skipText: {
+    color: '#FFFFFF',
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '600',
   },
   logo: {
     width: SCREEN_WIDTH * 0.55,
     height: SCREEN_HEIGHT * 0.08,
     marginBottom: SCREEN_HEIGHT * 0.008,
-  },
-  tagline: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#FFFFFF',
-    fontWeight: '400',
+    marginTop: SCREEN_HEIGHT * 0.02,
   },
   formSection: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingHorizontal: SCREEN_WIDTH * 0.07,
     paddingTop: SCREEN_HEIGHT * 0.036,
+    marginTop: -1,
   },
   title: {
-    fontSize: SCREEN_WIDTH * 0.08,
+    fontSize: SCREEN_WIDTH * 0.075,
     fontWeight: '600',
-    color: '#1E1E1E',
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.015,
+    marginTop: SCREEN_HEIGHT * 0.012,
+    marginBottom: SCREEN_HEIGHT * 0.012,
   },
   subtitle: {
     fontSize: SCREEN_WIDTH * 0.037,
-    color: '#666666',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: SCREEN_WIDTH * 0.054,
     marginBottom: SCREEN_HEIGHT * 0.04,
+    paddingHorizontal: SCREEN_WIDTH * 0.06,
   },
   inputContainer: {
     marginBottom: SCREEN_HEIGHT * 0.025,

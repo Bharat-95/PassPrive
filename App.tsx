@@ -13,6 +13,7 @@ import {
   PermissionsAndroid,
   AppState,
   useColorScheme,
+  Linking,
 } from 'react-native';
 
 import {
@@ -57,6 +58,7 @@ import { GOOGLE_MAPS_API_KEY } from '@env';
 import { LightThemeColors, DarkThemeColors } from './theme/theme';
 import { AuthProvider } from './context/AuthContext';
 import { markLastOpened } from './services/userActivity';
+import supabase from './supabase';
 
 // ---------------------------------------------------------------------
 // CONTEXTS
@@ -205,7 +207,7 @@ function AppNavigator() {
 
       <Stack.Screen name="ForgotPassword" options={{ animation: 'slide_from_bottom' }}>
         {() => (
-          <ScreenWrapper>
+          <ScreenWrapper safeColor="#5800AB">
             <ForgotPassword />
           </ScreenWrapper>
         )}
@@ -546,13 +548,54 @@ export default function App() {
   }, []);
 
   const locationValue = useMemo(() => locationText, [locationText]);
+  const linking = useMemo(
+    () => ({
+      prefixes: ['passprive://'],
+      config: {
+        screens: {
+          ResetPassword: 'reset-password',
+        },
+      },
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    const applyRecoverySessionFromUrl = async (url?: string | null) => {
+      if (!url || !url.includes('type=recovery')) return;
+
+      const hash = url.split('#')[1] || '';
+      if (!hash) return;
+
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+      }
+    };
+
+    Linking.getInitialURL()
+      .then(url => applyRecoverySessionFromUrl(url))
+      .catch(() => {});
+
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      applyRecoverySessionFromUrl(url).catch(() => {});
+    });
+
+    return () => sub.remove();
+  }, []);
 
   return (
     <SafeAreaProvider>
       <ThemeContext.Provider value={theme}>
         <LocationContext.Provider value={locationValue}>
           <AuthProvider>
-            <NavigationContainer>
+            <NavigationContainer linking={linking}>
               <AppNavigator />
             </NavigationContainer>
           </AuthProvider>
