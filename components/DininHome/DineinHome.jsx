@@ -10,7 +10,7 @@ import InyourDistrict from '../DininHome/InyourDistrict';
 import RestaurantList from '../DininHome/RestaurantList';
 import FilterModal from '../DininHome/FilterModal';
 
-const DineinHome = ({ onFilterPosition }) => {
+const DineinHome = ({ onFilterPosition, compactTopSpacing = false }) => {
   const [filterModal, setFilterModal] = useState(false);
   const [contentTopOffset, setContentTopOffset] = useState(0);
   const bannerAnim = useRef(new Animated.Value(0)).current;
@@ -36,7 +36,9 @@ const DineinHome = ({ onFilterPosition }) => {
       >
         <Animated.View
           style={[
-            styles.bannerTopSpacing,
+            {
+              marginTop: compactTopSpacing ? 2 : 30,
+            },
             {
               opacity: bannerAnim,
               transform: [
@@ -77,7 +79,4 @@ const DineinHome = ({ onFilterPosition }) => {
 export default DineinHome;
 
 const styles = StyleSheet.create({
-  bannerTopSpacing: {
-    marginTop: 30,
-  },
 });

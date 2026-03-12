@@ -1,13 +1,23 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, Animated, Dimensions, Image, StatusBar } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import supabase from "../supabase";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const ONBOARDING_BG = require('../assets/boarding-optimized.jpg');
+const ONBOARDING_LOGO = require('../assets/passprrive.png');
 
 export default function SplashScreen() {
   const navigation = useNavigation();
+  const [authResolved, setAuthResolved] = useState(false);
+  const [onboardingBgReady, setOnboardingBgReady] = useState(false);
+  const [onboardingLogoReady, setOnboardingLogoReady] = useState(false);
+  const [onboardingBgPrefetched, setOnboardingBgPrefetched] = useState(false);
+  const [assetsSettled, setAssetsSettled] = useState(false);
+  const [onboardingMinDelayDone, setOnboardingMinDelayDone] = useState(false);
+  const [nextRouteName, setNextRouteName] = useState("Onboarding");
+  const hasNavigatedRef = useRef(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -39,18 +49,20 @@ export default function SplashScreen() {
       }),
     ]).start();
 
-    // Shimmer effect
     Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 1,
         duration: 2000,
         useNativeDriver: true,
-      })
+      }),
     ).start();
 
     const navigateFromSplash = async () => {
-      const isLogged = await AsyncStorage.getItem("isLoggedIn");
-      const { data: sessionData } = await supabase.auth.getSession();
+      const [isLogged, sessionResult] = await Promise.all([
+        AsyncStorage.getItem("isLoggedIn"),
+        supabase.auth.getSession(),
+      ]);
+      const { data: sessionData } = sessionResult;
       const hasSession = !!sessionData?.session?.user;
       const shouldGoHome = isLogged === "true" && hasSession;
 
@@ -58,16 +70,63 @@ export default function SplashScreen() {
         await AsyncStorage.setItem("isLoggedIn", "false");
       }
 
-      setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: shouldGoHome ? "Home" : "Onboarding" }],
-        });
-      }, 2000);
+      setNextRouteName(shouldGoHome ? "Home" : "Onboarding");
+      setAuthResolved(true);
     };
 
     navigateFromSplash();
   }, [fadeAnim, navigation, scaleAnim, shimmerAnim, taglineFade]);
+
+  useEffect(() => {
+    const uri = Image.resolveAssetSource(ONBOARDING_BG)?.uri;
+    if (!uri) {
+      setOnboardingBgPrefetched(true);
+      return;
+    }
+    Image.prefetch(uri)
+      .then(() => setOnboardingBgPrefetched(true))
+      .catch(() => setOnboardingBgPrefetched(true));
+  }, []);
+
+  useEffect(() => {
+    if (!onboardingBgReady || !onboardingLogoReady || !onboardingBgPrefetched) {
+      setAssetsSettled(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setAssetsSettled(true);
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [onboardingBgReady, onboardingLogoReady, onboardingBgPrefetched]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setOnboardingMinDelayDone(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (hasNavigatedRef.current) {
+      return;
+    }
+    if (!authResolved) {
+      return;
+    }
+    if (nextRouteName === "Onboarding" && !assetsSettled) {
+      return;
+    }
+    if (nextRouteName === "Onboarding" && !onboardingMinDelayDone) {
+      return;
+    }
+
+    hasNavigatedRef.current = true;
+    navigation.reset({
+      index: 0,
+      routes: [{ name: nextRouteName }],
+    });
+  }, [authResolved, nextRouteName, assetsSettled, onboardingMinDelayDone, navigation]);
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -77,8 +136,8 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#5800AB" barStyle="light-content" />
-      {/* Shimmer overlay effect */}
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.shimmer,
           {
@@ -96,7 +155,7 @@ export default function SplashScreen() {
           }}
         >
           <Image
-            source={require('../assets/passprrive.png')}
+            source={ONBOARDING_LOGO}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -109,6 +168,22 @@ export default function SplashScreen() {
       <Animated.View style={[styles.bottomBranding, { opacity: taglineFade }]}>
         <Text style={styles.poweredBy}>Experience Mauritius Like Never Before</Text>
       </Animated.View>
+
+      {/* Hidden warm-up image to guarantee onboarding hero is loaded before navigation */}
+      <Image
+        source={ONBOARDING_BG}
+        defaultSource={ONBOARDING_BG}
+        fadeDuration={0}
+        onLoadEnd={() => setOnboardingBgReady(true)}
+        style={styles.hiddenPreloadImage}
+      />
+      <Image
+        source={ONBOARDING_LOGO}
+        defaultSource={ONBOARDING_LOGO}
+        fadeDuration={0}
+        onLoadEnd={() => setOnboardingLogoReady(true)}
+        style={styles.hiddenPreloadImage}
+      />
     </View>
   );
 }
@@ -121,31 +196,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: 'relative',
   },
-  shimmer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: SCREEN_WIDTH * 0.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    transform: [{ skewX: '-20deg' }],
-  },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    left: -SCREEN_WIDTH * 0.5,
+    width: SCREEN_WIDTH * 0.5,
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    transform: [{ skewX: '-20deg' }],
   },
   logo: {
     width: SCREEN_WIDTH * 0.7,
     height: SCREEN_HEIGHT * 0.12,
     marginBottom: SCREEN_HEIGHT * 0.02,
-  },
-  tagline: {
-    color: '#FFFFFF',
-    fontSize: SCREEN_WIDTH * 0.042,
-    fontWeight: '500',
-    textAlign: 'center',
-    letterSpacing: 0.5,
   },
   bottomBranding: {
     position: 'absolute',
@@ -157,5 +224,13 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.035,
     fontWeight: '400',
     letterSpacing: 1,
+  },
+  hiddenPreloadImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0,
   },
 });

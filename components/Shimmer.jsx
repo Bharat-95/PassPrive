@@ -2,7 +2,11 @@ import React, { useRef, useEffect } from "react";
 import { View, Animated, StyleSheet } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 
-export default function Shimmer({ style }) {
+export default function Shimmer({
+  style,
+  baseColor = "#1E1E1E",
+  highlightColors = ["#2A2A2A", "#3A3A3A", "#2A2A2A"],
+}) {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -13,7 +17,7 @@ export default function Shimmer({ style }) {
         useNativeDriver: true,
       })
     ).start();
-  }, []);
+  }, [shimmerAnim]);
 
   const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -21,7 +25,7 @@ export default function Shimmer({ style }) {
   });
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: baseColor }, style]}>
       <Animated.View
         style={[
           {
@@ -40,7 +44,7 @@ export default function Shimmer({ style }) {
           }}
         >
           <LinearGradient
-            colors={["#2A2A2A", "#3A3A3A", "#2A2A2A"]}
+            colors={highlightColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ flex: 1 }}

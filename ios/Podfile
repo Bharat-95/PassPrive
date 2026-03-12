@@ -8,6 +8,10 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Hermes prebuilt artifacts can miss dSYMs (e.g. hermesvm.framework) in Archive uploads.
+# Build Hermes from source so Xcode generates the required dSYMs for App Store symbolication.
+ENV['RCT_BUILD_HERMES_FROM_SOURCE'] = 'true'
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green

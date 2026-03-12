@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { View, TextInput, StyleSheet, Animated, Text } from 'react-native';
+import { View, TextInput, StyleSheet, Animated, Text, Platform } from 'react-native';
 import { Search } from 'lucide-react-native';
 import { ThemeContext } from '../../App';
 
@@ -9,10 +9,14 @@ const placeholders = [
   'Explore stores around you',
 ];
 
-export default function HomeSearchBar({ elevated = false }) {
+export default function HomeSearchBar({
+  elevated = false,
+  forceWhiteSurface = false,
+}) {
   const translateY = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const { colors } = useContext(ThemeContext);
+  const isAndroid = Platform.OS === 'android';
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -37,17 +41,17 @@ export default function HomeSearchBar({ elevated = false }) {
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.container(colors, elevated)}>
-        <Search size={20} color={colors.subtitle} />
+      <View style={styles.container(colors, elevated, isAndroid, forceWhiteSurface)}>
+        <Search size={20} color={'#6E5E62'} />
 
         <View style={styles.placeholderWrapper}>
           <Animated.View pointerEvents="none" style={{ transform: [{ translateY }] }}>
             {placeholders.map((text, idx) => (
-              <Text key={idx} style={styles.placeholder(colors)}>
+              <Text key={idx} style={styles.placeholder()}>
                 {text}
               </Text>
             ))}
-            <Text style={styles.placeholder(colors)}>{placeholders[0]}</Text>
+            <Text style={styles.placeholder()}>{placeholders[0]}</Text>
           </Animated.View>
 
           <TextInput style={styles.input} placeholder="" />
@@ -60,22 +64,25 @@ export default function HomeSearchBar({ elevated = false }) {
 const styles = {
   wrapper: {
     position: 'relative',
+    marginTop: 0,
   },
 
-  container: (colors, elevated) => ({
+  container: (colors, elevated, isAndroid, forceWhiteSurface) => ({
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFBFF',
+    borderWidth: 1,
+    borderColor: 'rgba(147, 122, 110, 0.35)',
     paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingVertical: isAndroid ? 11 : 14,
     borderRadius: 14,
     position: 'relative',
     zIndex: 1,
     shadowColor: '#000',
-    shadowOpacity: elevated ? 0.15 : 0,
-    shadowRadius: elevated ? 12 : 0,
-    shadowOffset: { width: 0, height: elevated ? 6 : 0 },
-    elevation: elevated ? 6 : 0,
+    shadowOpacity: !isAndroid && elevated ? 0.15 : 0,
+    shadowRadius: !isAndroid && elevated ? 12 : 0,
+    shadowOffset: { width: 0, height: !isAndroid && elevated ? 6 : 0 },
+    elevation: isAndroid ? 0 : elevated ? 6 : 0,
   }),
 
   placeholderWrapper: {
@@ -85,9 +92,9 @@ const styles = {
     marginLeft: 10,
   },
 
-  placeholder: colors => ({
+  placeholder: () => ({
     height: 20,
-    color: colors.subtitle,
+    color: '#6E5E62',
     fontSize: 15,
   }),
 

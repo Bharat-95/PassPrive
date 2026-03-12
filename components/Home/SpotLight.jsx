@@ -1,4 +1,4 @@
-import React, { useRef, useState, useContext } from 'react';
+import React, { useRef, useState, useContext, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Animated,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
+  PanResponder,
 } from 'react-native';
 
 import Video from 'react-native-video';
@@ -76,13 +78,66 @@ const CARD_WIDTH = width * 0.82;
 const SPACING = 2;
 const SIDE_SPACING = (width - CARD_WIDTH) / 2 - SPACING;
 
-export default function FoodieFrontrow({ onLoadingChange }) {
+const PULL_TRIGGER = 58;
+const MAX_PULL = 92;
+
+export default function FoodieFrontrow({
+  onLoadingChange,
+  onRefresh,
+  refreshing = false,
+}) {
   const { colors } = useContext(ThemeContext);
 
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
   const [muted, setMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(originalData.length * 2);
+  const pullY = useRef(new Animated.Value(0)).current;
+  const pullDistanceRef = useRef(0);
+
+  useEffect(() => {
+    Animated.timing(pullY, {
+      toValue: refreshing ? 44 : 0,
+      duration: 160,
+      useNativeDriver: false,
+    }).start();
+  }, [refreshing, pullY]);
+
+  const resetPull = () => {
+    pullDistanceRef.current = 0;
+    if (!refreshing) {
+      Animated.timing(pullY, {
+        toValue: 0,
+        duration: 130,
+        useNativeDriver: false,
+      }).start();
+    }
+  };
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx) && !refreshing,
+        onPanResponderMove: (_, g) => {
+          if (g.dy <= 0 || refreshing) {
+            return;
+          }
+          const next = Math.min(MAX_PULL, g.dy * 0.45);
+          pullDistanceRef.current = next;
+          pullY.setValue(next);
+        },
+        onPanResponderRelease: () => {
+          const shouldRefresh = pullDistanceRef.current >= PULL_TRIGGER;
+          resetPull();
+          if (shouldRefresh) {
+            onRefresh?.();
+          }
+        },
+        onPanResponderTerminate: resetPull,
+      }),
+    [onRefresh, pullY, refreshing],
+  );
 
   // 🔥 Notify parent when any media starts or stops loading
   const handleLoadStartAll = () => onLoadingChange?.(true);
@@ -230,8 +285,17 @@ export default function FoodieFrontrow({ onLoadingChange }) {
     );
   };
 
+  const pullOpacity = pullY.interpolate({
+    inputRange: [0, PULL_TRIGGER * 0.6, PULL_TRIGGER],
+    outputRange: [0, 0.45, 1],
+    extrapolate: 'clamp',
+  });
+
   return (
-    <View style={{ marginTop: 30 }}>
+    <View style={{ marginTop: 30 }} {...panResponder.panHandlers}>
+      <Animated.View style={[styles.pullContainer, { height: pullY, opacity: pullOpacity }]}>
+        <ActivityIndicator size="small" color={colors.text} />
+      </Animated.View>
       {/* Heading */}
       <View style={styles.headingContainer}>
         <LinearGradient
@@ -395,5 +459,9 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  pullContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

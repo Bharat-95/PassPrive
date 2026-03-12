@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import { ThemeContext } from '../App';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const ONBOARDING_BG = require('../assets/boarding-optimized.jpg');
+const ONBOARDING_LOGO = require('../assets/passprrive.png');
 
 export default function Onboarding() {
   const navigation = useNavigation();
@@ -25,6 +27,12 @@ export default function Onboarding() {
   const primaryBtnText = isDark ? '#111111' : '#FFFFFF';
   const secondaryTextColor = isDark ? '#CFCFCF' : '#737373';
   const linkTextColor = isDark ? '#FFFFFF' : '#000000';
+  const handleSkip = useCallback(() => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Home' }],
+    });
+  }, [navigation]);
 
   return (
     <View style={[styles.container, { backgroundColor: formSurfaceColor }]}>
@@ -34,7 +42,9 @@ export default function Onboarding() {
         {/* Logo and tagline section */}
         <View style={styles.logoSection}>
           <Image
-            source={require('../assets/boarding.jpg')}
+            source={ONBOARDING_BG}
+            defaultSource={ONBOARDING_BG}
+            fadeDuration={0}
             style={styles.backgroundImage}
           />
           <View style={styles.overlay} />
@@ -42,14 +52,16 @@ export default function Onboarding() {
           {/* Skip Button */}
           <TouchableOpacity 
             style={[styles.skipButton, { top: (insets?.top || 0) + 10 }]}
-            onPress={() => navigation.navigate('Home')}
+            onPress={handleSkip}
           >
             <Text style={styles.skipText}>Skip</Text>
           </TouchableOpacity>
           
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/passprrive.png')}
+              source={ONBOARDING_LOGO}
+              defaultSource={ONBOARDING_LOGO}
+              fadeDuration={0}
               style={styles.passPriveLogo}
               resizeMode="contain"
             />
@@ -115,6 +127,7 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     minHeight: SCREEN_HEIGHT * 0.65,
+    backgroundColor: 'transparent',
   },
   backgroundImage: {
     width: '100%',
@@ -159,12 +172,6 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.6,
     height: SCREEN_HEIGHT * 0.1,
     marginBottom: SCREEN_HEIGHT * 0.01,
-  },
-  tagline: {
-    fontSize: SCREEN_WIDTH * 0.038,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    fontWeight: '400',
   },
   purpleSection: {
     paddingHorizontal: SCREEN_WIDTH * 0.06,

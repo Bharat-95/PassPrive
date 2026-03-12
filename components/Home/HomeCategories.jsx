@@ -7,22 +7,43 @@ import {
   Pressable,
   Animated,
   Easing,
+  Platform,
 } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import { Home } from "lucide-react-native";
 import { ThemeContext } from "../../App";
 
+const DINING_ICON = require("../../assets/Dining.png");
+const STORES_ICON = require("../../assets/Stores.png");
+
+let categoryIconsPrefetched = false;
+
 /* STATIC CATEGORIES */
 const categories = [
-  { key: "dining", title: "Dining", icon: require("../../assets/Dining.png") },
-  { key: "stores", title: "Stores", icon: require("../../assets/Stores.png") },
+  { key: "dining", title: "Dining", icon: DINING_ICON },
+  { key: "stores", title: "Stores", icon: STORES_ICON },
   // { key: "sports", title: "Sports", icon: require("../../assets/Sports.png") },
 ];
 
 /* CARD */
 const CategoryCard = React.memo(
-  ({ title, icon, colors, small, collapsed, onPress, isActive, elevated }) => {
+  ({
+    title,
+    icon,
+    colors,
+    small,
+    collapsed,
+    onPress,
+    isActive,
+    elevated,
+    forceWhiteSurface = false,
+    isDarkTheme = false,
+  }) => {
     const activeBorder = "#C59D5F";
-    const activeBg = "#E7D6B9";
+    const inactiveBorder = isDarkTheme ? "#4A4450" : "#D0CDD2";
+    const gradientColors = isDarkTheme
+      ? ["#E6E0E9", "#1D1B20"]
+      : ["#FFFBFF", "#E6E0E9"];
 
     return (
       <Pressable
@@ -30,38 +51,37 @@ const CategoryCard = React.memo(
         style={({ pressed }) => [
           small ? styles.smallCard : styles.bigCard,
           {
-            backgroundColor: isActive ? activeBg : colors.card,
-            borderWidth: isActive ? 1 : 0,
-            borderColor: isActive ? activeBorder : "transparent",
-
-            shadowColor: isActive ? activeBorder : "transparent",
-            shadowOpacity: isActive ? 0.35 : 0,
-            shadowRadius: isActive ? 10 : 0,
-            shadowOffset: { width: 0, height: 6 },
-            elevation: isActive ? 6 : 0,
-            ...(small && elevated
-              ? {
-                  shadowColor: "#000",
-                  shadowOpacity: 0.12,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 5 },
-                  elevation: Math.max(isActive ? 6 : 0, 5),
-                }
-              : null),
+            backgroundColor: isDarkTheme ? "#1D1B20" : "#FFFBFF",
+            borderWidth: small ? 0 : isActive ? 1 : 1,
+            borderColor: small ? "transparent" : isActive ? activeBorder : inactiveBorder,
+            shadowColor: "#000",
+            shadowOpacity: isActive ? 0.34 : 0.22,
+            shadowRadius: isActive ? 14 : 10,
+            shadowOffset: { width: 0, height: isActive ? 8 : 6 },
+            elevation: isActive ? 10 : 7,
           },
           pressed && { transform: [{ scale: 0.96 }] },
         ]}
       >
+        <LinearGradient
+          pointerEvents="none"
+          colors={gradientColors}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[StyleSheet.absoluteFillObject, styles.cardGradientRadius]}
+        />
         <Image
           source={icon}
           style={small ? styles.smallIcon : styles.bigIcon}
           resizeMode="contain"
+          fadeDuration={0}
+          resizeMethod={Platform.OS === "android" ? "resize" : "auto"}
         />
 
         <Text
           style={[
             small ? styles.smallLabel : styles.bigLabel,
-            { color: colors.text },
+            { color: small ? "#000000" : isDarkTheme ? "#FFFFFF" : "#000000" },
           ]}
         >
           {title}
@@ -71,7 +91,14 @@ const CategoryCard = React.memo(
   }
 );
 
-export default function HomeCategories({ collapsed, selected, onSelect, variant = "auto", elevated = false }) {
+export default function HomeCategories({
+  collapsed,
+  selected,
+  onSelect,
+  variant = "auto",
+  elevated = false,
+  forceWhiteSurface = false,
+}) {
   const { colors } = useContext(ThemeContext);
 
   const collapseAnim = useRef(new Animated.Value(collapsed ? 1 : 0)).current;
@@ -86,6 +113,19 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
   };
 
   const homeBg = homeButtonColors[selected] || "#C59D5F";
+
+  useEffect(() => {
+    if (categoryIconsPrefetched) return;
+    categoryIconsPrefetched = true;
+
+    const uris = [DINING_ICON, STORES_ICON]
+      .map(asset => Image.resolveAssetSource(asset)?.uri)
+      .filter(Boolean);
+
+    uris.forEach(uri => {
+      Image.prefetch(uri);
+    });
+  }, []);
 
   useEffect(() => {
     Animated.timing(collapseAnim, {
@@ -109,6 +149,7 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
               small={false}
               collapsed={false}
               isActive={selected === c.key}
+              isDarkTheme={colors.background === "#0D0D0D"}
               onPress={() => onSelect(c.key)}
             />
           ))}
@@ -119,7 +160,7 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
 
   if (variant === "sticky") {
     return (
-      <View style={styles.smallRowContainerStatic}>
+      <View style={styles.smallRowContainerSticky}>
         <View style={styles.smallRow}>
           <Pressable
             onPress={() => onSelect("home")}
@@ -143,6 +184,8 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
                 collapsed={true}
                 isActive={selected === c.key}
                 elevated={elevated}
+                forceWhiteSurface={forceWhiteSurface}
+                isDarkTheme={colors.background === "#0D0D0D"}
                 onPress={() => onSelect(c.key)}
               />
             ))}
@@ -215,6 +258,7 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
               small={false}
               collapsed={collapsed}
               isActive={selected === c.key}
+              isDarkTheme={colors.background === "#0D0D0D"}
               onPress={() => onSelect(c.key)}
             />
           ))}
@@ -264,6 +308,8 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
                 collapsed={collapsed}
                 isActive={selected === c.key}
                 elevated={elevated}
+                forceWhiteSurface={forceWhiteSurface}
+                isDarkTheme={colors.background === "#0D0D0D"}
                 onPress={() => onSelect(c.key)}
               />
             ))}
@@ -278,14 +324,20 @@ export default function HomeCategories({ collapsed, selected, onSelect, variant 
 const styles = StyleSheet.create({
   gridContainerStatic: {
     marginHorizontal: 12,
-    marginTop: 15,
+    marginTop: 36,
   },
   smallRowContainerStatic: {
     paddingHorizontal: 16,
     paddingTop: 8,
   },
+  smallRowContainerSticky: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
   gridContainer: {
     marginHorizontal: 12,
+    marginTop: 10,
   },
   row: {
     flexDirection: "row",
@@ -297,13 +349,22 @@ const styles = StyleSheet.create({
   bigCard: {
     width: "48.5%",
     minHeight: 135,
-    paddingVertical: 20,
+    paddingVertical: 10,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
-  bigIcon: { width: 54, height: 54, marginBottom: 10 },
-  bigLabel: { fontSize: 15, fontWeight: "700" },
+  bigIcon: {
+    width: Platform.OS === "android" ? 156 : 173,
+    height: Platform.OS === "android" ? 114 : 126,
+    marginBottom: 2,
+  },
+  bigLabel: {
+    fontSize: 14,
+    ...(Platform.OS === "android"
+      ? { fontFamily: "sans-serif-medium", fontWeight: "500" }
+      : { fontFamily: "Inter", fontWeight: "600" }),
+  },
 
   smallRowContainer: {
     paddingHorizontal: 16,
@@ -340,11 +401,14 @@ const styles = StyleSheet.create({
     width: "48.5%",
     paddingVertical: 8,
     height: 44,
-    borderRadius: 10,
+    borderRadius: 16,
     alignItems: "center",
     flexDirection: "row",
     gap: 6,
     justifyContent: "center",
+  },
+  cardGradientRadius: {
+    borderRadius: 16,
   },
 
   smallIcon: { width: 20, height: 20 },

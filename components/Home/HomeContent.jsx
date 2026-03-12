@@ -1,6 +1,6 @@
 // components/Home/HomeContent.jsx
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Animated, View, Easing } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View } from "react-native";
 import HomeOffers from "./HomeOffers";
 import SpotLight from "./SpotLight";
 import StoreCategory from "../Home/StoreSearchBar";
@@ -14,6 +14,9 @@ export default function HomeContent({
   onLoadingChange,
   renderInlineCategories,
   onInlineCategoriesLayout,
+  onSpotlightLayout,
+  onSpotlightRefresh,
+  spotlightRefreshing = false,
 }) {
   const [offersCount, setOffersCount] = useState(0);
   const [loadingStates, setLoadingStates] = useState({
@@ -24,17 +27,6 @@ export default function HomeContent({
     foodie: false,
     events: false,
   });
-  const bannerReveal = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(bannerReveal, {
-      toValue: !loadingStates.offers && offersCount > 0 ? 1 : 0,
-      duration: 320,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [loadingStates.offers, offersCount, bannerReveal]);
-
   const updateLoading = useCallback((section, value) => {
     setLoadingStates(prev => {
       if (prev[section] === value) {
@@ -50,54 +42,55 @@ export default function HomeContent({
       return updated;
     });
   }, [onLoadingChange]);
+  const handleFoodieLoading = useCallback(
+    value => updateLoading("foodie", value),
+    [updateLoading]
+  );
 
-  const animatedBannerHeight = bannerReveal.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, BANNER_HEIGHT],
-  });
-  const animatedBannerSpacing = bannerReveal.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 30],
-  });
+  const showOffersBanner = !loadingStates.offers && offersCount > 0;
 
   return (
     <>
-      <Animated.View
-        style={{
-          marginTop: animatedBannerSpacing,
-          marginBottom: animatedBannerSpacing,
-          height: animatedBannerHeight,
-          opacity: bannerReveal,
-          transform: [
-            {
-              translateY: bannerReveal.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-10, 0],
-              }),
-            },
-          ],
-          overflow: "hidden",
-        }}
-      >
+      {showOffersBanner ? (
+        <View style={{ height: BANNER_HEIGHT, overflow: "hidden" }}>
+          <HomeOffers
+            onLoadingChange={v => updateLoading("offers", v)}
+            onOffersCountChange={count => setOffersCount(count)}
+          />
+        </View>
+      ) : (
         <HomeOffers
           onLoadingChange={v => updateLoading("offers", v)}
           onOffersCountChange={count => setOffersCount(count)}
         />
-      </Animated.View>
+      )}
       {renderInlineCategories ? (
         <View
           onLayout={e => {
             const { y, height } = e.nativeEvent.layout;
-            onInlineCategoriesLayout?.(y + height);
+            onInlineCategoriesLayout?.({ startY: y, endY: y + height });
           }}
         >
           {renderInlineCategories}
         </View>
       ) : null}
-      <SpotLight onLoadingChange={(v) => updateLoading("spotlight", v)} />
-      <StoreCategory onLoadingChange={(v) => updateLoading("store", v)} />
+      <View
+        onLayout={e => {
+          const { y } = e.nativeEvent.layout;
+          onSpotlightLayout?.(y);
+        }}
+      >
+        {/* <SpotLight
+          onLoadingChange={(v) => updateLoading("spotlight", v)}
+          onRefresh={onSpotlightRefresh}
+          refreshing={spotlightRefreshing}
+        /> */}
+      </View>
+      {/* <StoreCategory onLoadingChange={(v) => updateLoading("store", v)} /> */}
+
+       <FoodieFrontView onLoadingChange={handleFoodieLoading} />
       <Trending onLoadingChange={(v) => updateLoading("trending", v)} />
-      <FoodieFrontView onLoadingChange={(v) => updateLoading("foodie", v)} />
+     
       <EventSection onLoadingChange={(v) => updateLoading("events", v)} />
     </>
   );

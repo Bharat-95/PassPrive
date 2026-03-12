@@ -9,7 +9,7 @@ import OffersForYou from '../StoresHome/OffersForYou';
 import FilterModal from '../DininHome/FilterModal';
 import StoresList from '../StoresHome/StoresList';
 
-const StoreHome = ({ onFilterPosition }) => {
+const StoreHome = ({ onFilterPosition, compactTopSpacing = false }) => {
   const [filterModal, setFilterModal] = useState(false);
   const [contentTopOffset, setContentTopOffset] = useState(0);
   const bannerAnim = useRef(new Animated.Value(0)).current;
@@ -49,7 +49,9 @@ const StoreHome = ({ onFilterPosition }) => {
       >
         <Animated.View
           style={[
-            styles.bannerTopSpacing,
+            {
+              marginTop: compactTopSpacing ? 2 : 30,
+            },
             {
               opacity: bannerAnim,
               transform: [
@@ -90,7 +92,4 @@ const StoreHome = ({ onFilterPosition }) => {
 export default StoreHome;
 
 const styles = StyleSheet.create({
-  bannerTopSpacing: {
-    marginTop: 30,
-  },
 });

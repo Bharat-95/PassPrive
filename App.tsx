@@ -7,8 +7,8 @@ import React, {
 } from 'react';
 import {
   StatusBar,
-  StyleSheet,
   View,
+  LogBox,
   Platform,
   PermissionsAndroid,
   AppState,
@@ -27,6 +27,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './screens/Home';
 import Profile from './screens/Profile';
 import SavedLocations from './screens/SavedLocations';
+import SavedRestaurants from './screens/SavedRestaurants';
 import Login from './screens/Login';
 import Onboarding from './screens/Onboarding';
 import Signup from './screens/Signup';
@@ -50,7 +51,7 @@ import CardPaymentScreen from './screens/CardPaymentScreen';
 import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
 import StoreDetails from './screens/StoreDetails';
 import ReviewRestaurantBooking from './screens/ReviewRestaurantBooking';
-import Geolocation, { GeoPosition } from 'react-native-geolocation-service';
+import Geolocation from 'react-native-geolocation-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { GOOGLE_MAPS_API_KEY } from '@env';
@@ -76,6 +77,7 @@ export type RootStackParamList = {
   Home: { safeColor?: string } | undefined;
   Profile: undefined;
   SavedLocations: undefined;
+  SavedRestaurants: undefined;
   Login: undefined;
   Details: undefined;
   AuthGate: undefined;
@@ -260,6 +262,14 @@ function AppNavigator() {
         )}
       </Stack.Screen>
 
+      <Stack.Screen name="SavedRestaurants">
+        {() => (
+          <ScreenWrapper>
+            <SavedRestaurants />
+          </ScreenWrapper>
+        )}
+      </Stack.Screen>
+
       <Stack.Screen name="Details">
         {() => (
           <ScreenWrapper safeColor="#5800AB">
@@ -408,11 +418,32 @@ function AppNavigator() {
   );
 }
 
+function parseHashParams(hash: string): Record<string, string> {
+  return hash
+    .replace(/^#/, '')
+    .split('&')
+    .filter(Boolean)
+    .reduce<Record<string, string>>((acc, pair) => {
+      const [rawKey, ...rawValueParts] = pair.split('=');
+      if (!rawKey) return acc;
+      const key = decodeURIComponent(rawKey);
+      const value = decodeURIComponent(rawValueParts.join('=') || '');
+      acc[key] = value;
+      return acc;
+    }, {});
+}
+
 // ---------------------------------------------------------------------
 // MAIN APP COMPONENT
 // ---------------------------------------------------------------------
 export default function App() {
   const deviceTheme = useColorScheme(); // device setting (light/dark)
+
+  useEffect(() => {
+    LogBox.ignoreLogs([
+      'VirtualizedLists should never be nested inside plain ScrollViews with the same orientation',
+    ]);
+  }, []);
 
   // THEME MODE: system | light | dark
   const [themeMode, setThemeMode] = useState<'system' | 'light' | 'dark'>(
@@ -504,24 +535,41 @@ export default function App() {
               },
             );
 
-            const comps = res.data?.results?.[0]?.address_components || [];
-            let area = '',
-              city = '';
+            type AddressComponent = {
+              long_name: string;
+              short_name: string;
+              types: string[];
+            };
 
-            for (let c of comps) {
-              if (
-                !area &&
-                (c.types.includes('sublocality') ||
-                  c.types.includes('political'))
-              )
-                area = c.long_name;
-              if (!city && c.types.includes('locality')) city = c.long_name;
-            }
+            const comps: AddressComponent[] =
+              res.data?.results?.[0]?.address_components || [];
+            const pick = (...types: string[]) =>
+              comps.find(c => types.every(t => c.types.includes(t)))?.long_name || '';
 
-            const text =
-              area && city
-                ? `${area}, ${city} …`
-                : area || city || 'Location unavailable';
+            // Prefer specific locality hierarchy:
+            // primary (e.g. Baba Nagar), then town/area (e.g. Nacharam), then city.
+            const primary =
+              pick('neighborhood', 'political') ||
+              pick('sublocality_level_2', 'sublocality', 'political') ||
+              pick('sublocality_level_3', 'sublocality', 'political') ||
+              pick('premise');
+
+            const town =
+              pick('sublocality_level_1', 'sublocality', 'political') ||
+              pick('sublocality', 'political');
+
+            const city =
+              pick('locality', 'political') ||
+              pick('postal_town', 'political') ||
+              pick('administrative_area_level_2', 'political');
+
+            const normalize = (v: string) => v.replace(/[•…]/g, '').trim();
+            const parts = [primary, town, city]
+              .map(normalize)
+              .filter(Boolean)
+              .filter((p, i, arr) => arr.findIndex(x => x.toLowerCase() === p.toLowerCase()) === i);
+
+            const text = parts.length ? parts.join(', ') : 'Location unavailable';
 
             setLocationText(text);
             await AsyncStorage.setItem('user_location', text);
@@ -573,9 +621,9 @@ export default function App() {
       const hash = url.split('#')[1] || '';
       if (!hash) return;
 
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
+      const params = parseHashParams(hash);
+      const accessToken = params.access_token;
+      const refreshToken = params.refresh_token;
 
       if (accessToken && refreshToken) {
         await supabase.auth.setSession({
@@ -610,9 +658,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-// ---------------------------------------------------------------------
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-});
